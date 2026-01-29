@@ -22,4 +22,14 @@ export default defineConfig({
             },
         },
     ],
+    build: {
+        rollupOptions: {
+            input: {
+                main: 'index.html',
+                event: 'event.html',
+                book: 'book.html',
+                success: 'success.html'
+            }
+        }
+    }
 });

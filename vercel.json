@@ -1,16 +1,13 @@
 {
+    "cleanUrls": true,
     "rewrites": [
         {
-            "source": "/events/:match*",
+            "source": "/events/:id",
             "destination": "/event.html"
         },
         {
-            "source": "/book/:match*",
+            "source": "/book/:id",
             "destination": "/book.html"
-        },
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
         }
     ]
 }
