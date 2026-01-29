@@ -1,0 +1,16 @@
+{
+    "rewrites": [
+        {
+            "source": "/events/:match*",
+            "destination": "/event.html"
+        },
+        {
+            "source": "/book/:match*",
+            "destination": "/book.html"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
