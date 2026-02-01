@@ -194,19 +194,46 @@ ul {
     width: 100%;
 }
 
-.logo {
+.brand-logo {
     display: flex;
     justify-content: center;
+    align-items: center;
+    text-decoration: none;
 }
 
-.logo img {
-    height: 70px;
-    width: auto;
-    transition: var(--transition-fast);
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    line-height: 1.1;
 }
 
-.header.scrolled .logo img {
-    height: 50px;
+.brand-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--color-accent);
+    letter-spacing: -0.5px;
+    transition: color 0.3s ease;
+}
+
+.brand-subtitle {
+    font-family: var(--font-body);
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #336B66;
+}
+
+.header.scrolled .brand-title {
+    font-size: 1.5rem;
+}
+
+.header.scrolled .brand-subtitle {
+    display: none;
+    /* Hide subtitle on scroll to keep header compact, or reduce size */
 }
 
 .header-cta {

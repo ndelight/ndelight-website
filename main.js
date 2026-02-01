@@ -68,22 +68,53 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Sending...';
             btn.disabled = true;
 
-            setTimeout(() => {
-                alert('Thank you! Your message has been sent successfully.');
-                contactForm.reset();
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 1500);
+            fetch(API_URL, {
+                method: 'POST',
+                // SUPER IMPORTANT: Use text/plain to avoid CORS preflight options request which GAS fails on
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    name: contactForm.querySelector('#name').value,
+                    email: contactForm.querySelector('#email').value,
+                    message: contactForm.querySelector('#message').value
+                    // No 'action' needed for contact form as per unified_script logic
+                })
+            })
+                .then(response => response.text()) // Get text first to safely handle potential HTML errors
+                .then(text => {
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.result === 'success') {
+                            alert('Thank you! Your message has been sent successfully.');
+                            contactForm.reset();
+                        } else {
+                            alert('Something went wrong. Please try again later.');
+                            console.error('Script Error:', data);
+                        }
+                    } catch (e) {
+                        console.error("Submission Error:", e);
+                        alert("There was a technical issue sending your message. Please try again later.");
+                    }
+                })
+                .catch(err => {
+                    alert('Network error. Please try again.');
+                    console.error('Fetch Error:', err);
+                })
+                .finally(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                });
         });
     }
+
+    // GLOBAL SCRIPT URL (Unified Gatekeeper)
+    const API_URL = 'https://script.google.com/macros/s/AKfycby6Vn7zF3wTGLWbchur1GGXbWy9w-X--_ry1Bc9Mwrss9s3Wpk_XPIhTHi8ZA6Lans_/exec';
 
     // Upcoming Events Fetcher
     const eventsContainer = document.getElementById('events-container');
 
     if (eventsContainer) {
-        const SHEET_API = 'https://opensheet.elk.sh/1_7lOYKJZ_cmJeMn3hZNggNmk58Wu2SdYjVtlQgG-7lQ/upcoming_events';
-
-        fetch(SHEET_API)
+        // use ?action=get_events
+        fetch(`${API_URL}?action=get_events`)
             .then(response => response.json())
             .then(data => {
                 // Helper: Normalize Keys & Fix Drive Links
@@ -201,12 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Featured Work Fetcher (Sheet2)
     const portfolioContainer = document.getElementById('portfolio-container');
     if (portfolioContainer) {
-        const PORTFOLIO_API = 'https://opensheet.elk.sh/1_7lOYKJZ_cmJeMn3hZNggNmk58Wu2SdYjVtlQgG-7lQ/featured_events';
-
-        fetch(PORTFOLIO_API)
+        fetch(`${API_URL}?action=get_portfolio`)
             .then(response => response.json())
             .then(data => {
-                console.log('Portfolio Data:', data); // DEBUG: Check raw data
 
                 if (data.length === 0) {
                     portfolioContainer.innerHTML = '<p class="text-muted text-center">More work coming soon.</p>';
@@ -285,9 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Influencers Fetcher (Sheet3)
     const influencersContainer = document.getElementById('influencers-container');
     if (influencersContainer) {
-        const INFLUENCERS_API = 'https://opensheet.elk.sh/1_7lOYKJZ_cmJeMn3hZNggNmk58Wu2SdYjVtlQgG-7lQ/influencers';
-
-        fetch(INFLUENCERS_API)
+        fetch(`${API_URL}?action=get_influencers`)
             .then(response => response.json())
             .then(data => {
                 if (data.length === 0) {
@@ -306,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (idMatch && idMatch[1]) id = idMatch[1];
                     const idParamMatch = link.match(/id=([a-zA-Z0-9_-]+)/);
                     if (idParamMatch && idParamMatch[1]) id = idParamMatch[1];
+                    // Revert to 'thumbnail' but now we have 'no-referrer' on the img tag which should fix the blocking
                     return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1000` : link;
                 };
 
@@ -347,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     card.innerHTML = `
                         <div class="influencer-img-wrapper">
-                            <img src="${profileUrl}" alt="${name}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';">
+                            <img src="${profileUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';">
                         </div>
                         <h3 class="influencer-name">${name}</h3>
                         <div class="influencer-contact social-links">

@@ -22,19 +22,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const SHEET_API = 'https://opensheet.elk.sh/1_7lOYKJZ_cmJeMn3hZNggNmk58Wu2SdYjVtlQgG-7lQ/upcoming_events';
+    // Updated to use Secure Unified Script
+    const API_URL = 'https://script.google.com/macros/s/AKfycby6Vn7zF3wTGLWbchur1GGXbWy9w-X--_ry1Bc9Mwrss9s3Wpk_XPIhTHi8ZA6Lans_/exec';
 
-    // Helper: Drive Link Converter
+    // Helper to fix Google Drive Images
     const driveLinkToDirect = (link) => {
         if (!link) return '';
+        let id = '';
         const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        if (idMatch && idMatch[1]) {
-            return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1920`;
-        }
-        return link;
+        if (idMatch && idMatch[1]) id = idMatch[1];
+        const idParamMatch = link.match(/id=([a-zA-Z0-9_-]+)/);
+        if (idParamMatch && idParamMatch[1]) id = idParamMatch[1];
+        return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1920` : link;
     };
 
-    fetch(SHEET_API)
+    fetch(`${API_URL}?action=get_events`)
         .then(response => response.json())
         .then(data => {
             console.log('Data fetched:', data.length, 'rows'); // DEBUG

@@ -37,11 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. Fetch Data
-    const SHEET_API = 'https://opensheet.elk.sh/1_7lOYKJZ_cmJeMn3hZNggNmk58Wu2SdYjVtlQgG-7lQ/upcoming_events';
-    let currentEvent = null;
+    // Updated to use Secure Unified Script
+    const API_URL = 'https://script.google.com/macros/s/AKfycby6Vn7zF3wTGLWbchur1GGXbWy9w-X--_ry1Bc9Mwrss9s3Wpk_XPIhTHi8ZA6Lans_/exec';
+
+    let eventData = null;
     let ticketPrice = 0;
 
-    fetch(SHEET_API)
+    let currentEvent = null;
+    // let ticketPrice = 0; // This line was a duplicate and is removed for clarity.
+
+    fetch(`${API_URL}?action=get_events`)
         .then(res => res.json())
         .then(data => {
             currentEvent = data.find(item => {
