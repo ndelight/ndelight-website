@@ -24,10 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile Menu
     const menuToggle = document.querySelector('.menu-toggle');
     const nav = document.querySelector('.nav');
-    if (menuToggle) {
+
+    // Toggle Menu
+    if (menuToggle && nav) {
         menuToggle.addEventListener('click', () => {
             nav.classList.toggle('active');
             menuToggle.classList.toggle('is-active');
+
+            // Inject Mobile buttons if missing
+            const navList = nav.querySelector('.nav-list');
+            if (navList && !navList.querySelector('.mobile-auth-btn')) {
+                const loginLi = document.createElement('li');
+                loginLi.innerHTML = `<a href="/login.html" class="btn btn-primary mobile-auth-btn">Login / Sign Up</a>`;
+                navList.appendChild(loginLi);
+            }
         });
 
         // Close menu when a link is clicked

@@ -654,6 +654,80 @@ ul {
     border-radius: 4px;
 }
 
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    .header-container {
+        grid-template-columns: auto 1fr auto;
+        padding: 0 1rem;
+        gap: 1rem;
+    }
+
+    .nav {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(18, 18, 18, 0.98);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 999;
+    }
+
+    .nav.active {
+        transform: translateX(0);
+    }
+
+    .nav-list {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .nav-link {
+        font-size: 1.5rem;
+    }
+
+    .brand-logo {
+        position: relative;
+        z-index: 1000;
+        justify-self: start;
+    }
+
+    .brand-title {
+        font-size: 1.4rem;
+    }
+
+    .menu-toggle {
+        display: flex;
+        z-index: 1200;
+    }
+
+    /* Ensure CTA (Login/Signup) is visible on mobile or integrated */
+    .header-cta {
+        display: none;
+        /* Hide standard buttons on mobile to save space */
+    }
+
+    /* Mobile CTA - Add these links inside the Nav Menu via JS or show icon */
+    .nav-list .mobile-only-btn {
+        display: block;
+        padding: 10px 20px;
+        background: var(--color-accent);
+        color: #000;
+        border-radius: 6px;
+        font-weight: bold;
+    }
+}
+
+/* Add utility to hide mobile buttons on desktop */
+.mobile-only-btn {
+    display: none;
+}
+
 .portfolio-item img {
     width: 100%;
     height: 100%;
