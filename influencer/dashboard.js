@@ -30,7 +30,9 @@ async function initDashboard() {
 
     // 4. Auto-Activate Logic (If Profile exists but Influencer row doesn't)
     if (!influencer && profile.role === 'influencer') {
-        const generatedCode = (profile.full_name || 'USER').replace(/\s+/g, '').toUpperCase().substring(0, 4) + Math.floor(1000 + Math.random() * 9000);
+        // Generate cleaner code: First Name + 'VIP' (e.g., ABDUVIP)
+        const firstName = (profile.full_name || 'USER').split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
+        const generatedCode = firstName + 'VIP';
 
         console.log('New Influencer - Creating Record with code:', generatedCode);
 
