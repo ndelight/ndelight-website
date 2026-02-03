@@ -14,6 +14,7 @@ const title = document.querySelector('.login-title')
 
 // State
 let isSignup = false
+let isInfluencer = false
 
 // Toggle Login / Signup
 toggleBtn.addEventListener('click', (e) => {
@@ -26,6 +27,7 @@ toggleBtn.addEventListener('click', (e) => {
         toggleText.textContent = 'Already have an account?'
         toggleBtn.textContent = 'Sign In'
         nameGroup.style.display = 'block'
+        document.getElementById('influencerGroup').style.display = 'flex'
         nameInput.required = true
     } else {
         title.textContent = 'NDelight'
@@ -33,12 +35,21 @@ toggleBtn.addEventListener('click', (e) => {
         toggleText.textContent = 'New here?'
         toggleBtn.textContent = 'Create Account'
         nameGroup.style.display = 'none'
+        document.getElementById('influencerGroup').style.display = 'none'
         nameInput.required = false
     }
 
     messageDiv.textContent = ''
     messageDiv.className = 'message'
 })
+
+// Toggle Influencer Mode
+const influencerCheck = document.getElementById('influencerCheck')
+if (influencerCheck) {
+    influencerCheck.addEventListener('change', (e) => {
+        isInfluencer = e.target.checked
+    })
+}
 
 // Handle Submit
 authForm.addEventListener('submit', async (e) => {
@@ -62,7 +73,8 @@ authForm.addEventListener('submit', async (e) => {
                 options: {
                     data: {
                         full_name: fullName,
-                        role: 'influencer' // Default role
+                        full_name: fullName,
+                        role: isInfluencer ? 'pending_influencer' : 'user' // Set to pending if influencer checked
                     }
                 }
             })
@@ -76,7 +88,8 @@ authForm.addEventListener('submit', async (e) => {
             // If Confirm Email is OFF, data.session will be present.
 
             if (data.session) {
-                window.location.href = '/influencer/' // Default landing
+                // Check role to decide where to go (or block if pending)
+                checkUserRole(data.user.id)
             } else {
                 messageDiv.textContent = 'Account created! Please sign in.'
                 messageDiv.classList.add('success')
@@ -119,6 +132,18 @@ async function checkUserRole(userId) {
             window.location.href = '/admin/'
         } else if (profile?.role === 'influencer') {
             window.location.href = '/influencer/'
+        } else if (profile?.role === 'pending_influencer') {
+            // Block login for pending users
+            await supabase.auth.signOut();
+            messageDiv.innerHTML = `
+                <div style="color: #ffd700; background: rgba(255, 215, 0, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #ffd700;">
+                    <h3>Application Received ⏳</h3>
+                    <p>Your influencer application is pending approval.</p>
+                </div>
+             `;
+            authForm.style.display = 'block'; // Show login form again
+            document.getElementById('continueBtn')?.remove();
+            document.getElementById('logoutBtn')?.remove();
         } else {
             window.location.href = '/'
         }
@@ -130,21 +155,45 @@ async function checkUserRole(userId) {
 }
 
 // Check Session on Load
-supabase.auth.getSession().then(({ data: { session } }) => {
+supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (session) {
-        // User is logged in. Show a message instead of instant vanish to avoid confusion.
+        // Hide form immediately
+        authForm.style.display = 'none';
+        document.querySelector('.login-subtitle').style.display = 'none';
+        document.querySelector('p').style.display = 'none'; // Hide toggle text
+
+        // Fetch Profile for nice display
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, role, email')
+            .eq('id', session.user.id)
+            .single();
+
+        const name = profile ? profile.full_name : 'User';
+        const role = profile ? profile.role : 'user';
+        const roleBadge = role === 'influencer' ? '🌟 Influencer' : (role === 'admin' ? '🛡️ Admin' : '👤 Member');
+
+        // Render Profile Card
         messageDiv.innerHTML = `
-            <div style="color: #ccc; margin-bottom: 1rem;">
-                You are already logged in via ${session.user.email}
+            <div style="background: #2a2a2a; padding: 2rem; border-radius: 12px; border: 1px solid #444; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                <div style="width: 60px; height: 60px; background: #ffd700; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 0 auto 1rem;">
+                    ${name.charAt(0).toUpperCase()}
+                </div>
+                <h3 style="color: #fff; margin-bottom: 0.2rem;">${name}</h3>
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 0.5rem;">${session.user.email}</p>
+                <div style="display:inline-block; padding: 4px 12px; background: rgba(255, 215, 0, 0.1); border: 1px solid #ffd700; border-radius: 20px; color: #ffd700; font-size: 0.8rem; margin-bottom: 1.5rem;">
+                    ${roleBadge}
+                </div>
+                
+                <button id="continueBtn" class="btn-login" style="margin-bottom: 0.8rem;">
+                    Go to Dashboard →
+                </button>
+                <button id="logoutBtn" class="btn-login" style="background: transparent; border: 1px solid #444; color: #ccc;">
+                    Sign Out
+                </button>
             </div>
-            <button id="continueBtn" class="btn-login" style="margin-bottom: 0.5rem;">Continue to Dashboard</button>
-            <button id="logoutBtn" class="btn-login" style="background: transparent; border: 1px solid #666; color: #ccc;">Sign Out</button>
         `;
         messageDiv.classList.add('success');
-
-        // Hide form to prevent double-login
-        authForm.style.display = 'none';
-        document.querySelector('p').style.display = 'none'; // Hide toggle text
 
         // Handle Buttons
         document.getElementById('continueBtn').addEventListener('click', () => {
@@ -155,8 +204,5 @@ supabase.auth.getSession().then(({ data: { session } }) => {
             await supabase.auth.signOut();
             window.location.reload();
         });
-
-        // Optional: Auto-redirect after 2 seconds if you prefer smooth flow
-        // checkUserRole(session.user.id)
     }
 })

@@ -177,9 +177,10 @@ if (uploadInput) {
 async function loadBookings(myCode) {
     // Although RLS handles it, we can also filter by code explicitly. 
     // RLS is the real guard though.
+    // JOIN events to get the title
     const { data: bookings, error } = await supabase
         .from('bookings')
-        .select('customer_name, event_id, amount, status, created_at')
+        .select('customer_name, event_id, created_at, events(title)')
         .eq('influencer_code', myCode) // Extra filter for clarity
         .order('created_at', { ascending: false })
         .limit(50) // Limit loading for performance
@@ -189,21 +190,16 @@ async function loadBookings(myCode) {
         return
     }
 
-    let totalAmt = 0
-    let html = '<table><thead><tr><th>Date</th><th>Customer</th><th>Event</th><th>Status</th><th>Amount</th></tr></thead><tbody>'
+    let html = '<table><thead><tr><th>Date</th><th>Customer</th><th>Event Name</th></tr></thead><tbody>'
 
     if (bookings && bookings.length > 0) {
         bookings.forEach(bk => {
-            if (bk.status === 'paid') {
-                totalAmt += Number(bk.amount)
-            }
+            const eventName = bk.events ? bk.events.title : 'Unknown Event';
 
             html += `<tr>
             <td>${new Date(bk.created_at).toLocaleDateString()}</td>
             <td>${bk.customer_name}</td>
-            <td>${bk.event_id}</td> <!--Ideally join event title-->
-            <td>${bk.status}</td>
-            <td>₹${bk.amount}</td>
+            <td>${eventName}</td>
         </tr>`
         })
         html += '</tbody></table>'
@@ -213,7 +209,6 @@ async function loadBookings(myCode) {
 
     document.getElementById('bookingsTable').innerHTML = html
     document.getElementById('totalBookings').textContent = bookings ? bookings.length : 0
-    document.getElementById('totalEarnings').textContent = `₹${totalAmt}` // Simple calculation
 }
 
 // Logout

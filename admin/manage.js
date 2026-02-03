@@ -57,6 +57,96 @@ window.showSection = async (section) => {
         await loadInfluencers(contentDiv)
     } else if (section === 'bookings') {
         await loadBookings(contentDiv)
+    } else if (section === 'pending') {
+        await loadPending(contentDiv)
+    }
+}
+
+// Pending Approval Logic
+async function loadPending(container) {
+    const { data: pendingUsers, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'pending_influencer')
+
+    let html = '<h3>Pending Influencer Applications</h3>'
+    if (pendingUsers && pendingUsers.length > 0) {
+        html += '<table><thead><tr><th>Name</th><th>Email</th><th>Actions</th></tr></thead><tbody>'
+        pendingUsers.forEach(user => {
+            html += `<tr>
+            <td>${user.full_name || 'Unknown'}</td>
+            <td>${user.email}</td>
+            <td>
+                <button class="btn-action" style="font-size:0.8rem; margin-right:10px;" onclick="window.approveInfluencer('${user.id}', '${user.full_name}', this)">Approve ✅</button>
+                <button class="btn-logout" style="font-size:0.8rem;" onclick="window.rejectInfluencer('${user.id}', this)">Reject ❌</button>
+            </td>
+        </tr>`
+        })
+        html += '</tbody></table>'
+    } else {
+        html += '<p>No pending applications.</p>'
+    }
+    container.innerHTML = html
+}
+
+window.approveInfluencer = async (userId, fullName, btnElement) => {
+    if (!confirm(`Approve ${fullName} as an Influencer?`)) return
+
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.textContent = 'Processing...';
+    }
+
+    // 1. Generate Code (Firstname + VIP)
+    const firstName = (fullName || 'USER').split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
+    const code = firstName + 'VIP';
+
+    // 2. Create Influencer Record
+    const { error: infError } = await supabase.from('influencers').insert([{
+        id: userId,
+        code: code,
+        active: true
+    }])
+
+    if (infError) {
+        alert('Error creating influencer record: ' + infError.message)
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.textContent = 'Approve ✅';
+        }
+        return
+    }
+
+    // 3. Update Profile Role
+    const { error: profileError } = await supabase.from('profiles').update({ role: 'influencer' }).eq('id', userId)
+
+    if (profileError) {
+        alert('Error updating profile: ' + profileError.message)
+    } else {
+        //alert(`Approved! Code: ${code}`) // Removed alert for smoother flow, or keep it short
+        await loadPending(document.getElementById('dynamicContent'))
+    }
+}
+
+window.rejectInfluencer = async (userId, btnElement) => {
+    if (!confirm('Reject this application? They will become a normal user.')) return
+
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.textContent = '...';
+    }
+
+    // Demote to 'user'
+    const { error } = await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
+
+    if (error) {
+        alert('Error: ' + error.message)
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.textContent = 'Reject ❌';
+        }
+    } else {
+        await loadPending(document.getElementById('dynamicContent'))
     }
 }
 
@@ -196,10 +286,29 @@ window.deleteEvent = async (id) => {
 
 
 window.deleteInfluencer = async (id) => {
-    if (!confirm('Are you sure you want to delete this influencer?')) return
-    const { error } = await supabase.from('influencers').delete().eq('id', id)
-    if (error) alert('Delete Failed: ' + error.message)
-    else await loadInfluencers(document.getElementById('dynamicContent'))
+    if (!confirm('Are you sure you want to delete this influencer? This will revoke their access.')) return
+
+    // 1. Delete from influencers table
+    const { error: infError } = await supabase.from('influencers').delete().eq('id', id)
+
+    if (infError) {
+        // If FK violation (e.g., has bookings), just de-activate
+        if (infError.code === '23503') { // ForeignKey Violation
+            if (confirm('This influencer has existing bookings and cannot be fully deleted to preserve history. Do you want to Deactivate them instead?')) {
+                await supabase.from('influencers').update({ active: false }).eq('id', id);
+                alert('Influencer Deactivated.');
+                await loadInfluencers(document.getElementById('dynamicContent'));
+                return;
+            }
+        }
+        alert('Delete Failed: ' + infError.message)
+        return;
+    }
+
+    // 2. Set profile role back to user (optional, keeps account but removes influencer status)
+    await supabase.from('profiles').update({ role: 'user' }).eq('id', id)
+
+    await loadInfluencers(document.getElementById('dynamicContent'))
 }
 
 async function loadInfluencers(container) {

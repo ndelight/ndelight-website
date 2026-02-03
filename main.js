@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 influencersContainer.innerHTML = '';
 
                 influencers.forEach((inf, index) => {
+                    const name = (inf.profiles && inf.profiles.full_name) || 'Influencer';
                     const profileUrl = inf.image_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
 
                     const delay = index * 0.1;
@@ -317,5 +318,122 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         fetchInfluencers();
+    }
+
+    // 4. Auth Header Logic (Profile vs Login)
+    const headerCta = document.querySelector('.header-cta');
+    if (headerCta) {
+        checkAuthHeader();
+    }
+
+    async function checkAuthHeader() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return; // Keep default Login/Signup
+
+        // Fetch user profile for name/role
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        const name = profile ? profile.full_name : 'User';
+        const role = profile ? profile.role : 'user';
+        const initial = name.charAt(0).toUpperCase();
+
+        // Target the Login/Signup buttons to hide them
+        const loginBtn = headerCta.querySelector('a[href="/login.html"].nav-link');
+        const signupBtn = headerCta.querySelector('a[href="/login.html"].btn');
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (signupBtn) signupBtn.style.display = 'none';
+
+        // Create Profile Dropdown
+        const profileContainer = document.createElement('div');
+        profileContainer.className = 'auth-profile-dropdown';
+        profileContainer.style.position = 'relative';
+        profileContainer.style.marginRight = '1.5rem';
+        profileContainer.style.cursor = 'pointer';
+        profileContainer.style.display = 'inline-block';
+
+        // Profile Avatar HTML
+        // Use Brand Green Border + Light Grey Background for premium feel matching logo/theme.
+        profileContainer.innerHTML = `
+            <div class="profile-trigger" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                <div style="width: 40px; height: 40px; background: #E6E2DC; color: #184E4A; border: 2px solid #184E4A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    ${initial}
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span class="profile-name" style="color: #1F2F2E; font-size: 0.8rem; font-weight: 600;">${name.split(' ')[0]}</span>
+                    <span style="color: #184E4A; font-size: 0.7rem;">▼</span>
+                </div>
+            </div>
+            
+            <div class="profile-menu" style="
+                display: none;
+                position: absolute;
+                top: 110%; /* moved down slightly */
+                right: -10px; /* shift left to align better under corner */
+                background: #1a1a1a;
+                border: 1px solid #333;
+                border-radius: 8px;
+                min-width: 160px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                padding: 0.5rem 0;
+                z-index: 1000;
+            ">
+                ${(role === 'influencer' || role === 'admin') ? `
+                <a href="/${role}/" style="display: block; padding: 10px 20px; color: #fff; text-decoration: none; font-size: 0.9rem; transition: background 0.2s;">
+                    Dashboard
+                </a>` : ''}
+                <div id="header-logout" style="display: block; padding: 10px 20px; color: #ff4d4d; text-decoration: none; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;">
+                    Sign Out
+                </div>
+            </div>
+        `;
+
+        // Insert before the menu toggle
+        const menuToggle = headerCta.querySelector('.menu-toggle');
+        if (menuToggle) {
+            headerCta.insertBefore(profileContainer, menuToggle);
+        } else {
+            headerCta.appendChild(profileContainer);
+        }
+
+        // Dropdown Toggle Logic
+        // Re-selecting inside the container to ensure we get the fresh elements
+        const trigger = profileContainer.querySelector('.profile-trigger');
+        const menu = profileContainer.querySelector('.profile-menu');
+
+        // Toggle on click
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click from immediately closing it
+            const isHidden = menu.style.display === 'none' || menu.style.display === '';
+            menu.style.display = isHidden ? 'block' : 'none';
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            // If click is outside the container, close logic
+            if (!profileContainer.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // Hover Effect specific to this menu items
+        const menuItems = menu.querySelectorAll('a, div');
+        menuItems.forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = '#333');
+            item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+        });
+
+        // Logout Action
+        const logoutBtn = profileContainer.querySelector('#header-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent menu toggle conflict
+                await supabase.auth.signOut();
+                window.location.reload();
+            });
+        }
     }
 });

@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: document.getElementById('phone').value,
         };
 
-        const influencerCode = null; // Can extract from URL /?ref=CODE if implemented
+        const influencerCode = document.getElementById('promoCode').value.trim() || null;
 
         const totalAmount = parseInt(displayTotal.textContent.replace(/[^0-9]/g, '')) || 0;
 
