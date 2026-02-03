@@ -8,9 +8,5 @@
             "source": "/book/:match*",
             "destination": "/book.html"
         },
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
-        }
     ]
 }
