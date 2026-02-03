@@ -34,7 +34,10 @@ export default defineConfig({
                 main: 'index.html',
                 event: 'event.html',
                 book: 'book.html',
-                success: 'success.html'
+                success: 'success.html',
+                login: 'login.html',
+                admin: 'admin/index.html',
+                influencer: 'influencer/index.html'
             }
         }
     }
