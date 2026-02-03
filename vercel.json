@@ -7,6 +7,6 @@
         {
             "source": "/book/:match*",
             "destination": "/book.html"
-        },
+        }
     ]
 }
