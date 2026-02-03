@@ -291,7 +291,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 influencersContainer.innerHTML = '';
 
                 influencers.forEach((inf, index) => {
-                    const name = (inf.profiles && inf.profiles.full_name) || 'Influencer';
+                    // Roboust Name Extraction
+                    let name = 'Influencer';
+                    if (inf.profiles) {
+                        if (Array.isArray(inf.profiles) && inf.profiles.length > 0) {
+                            name = inf.profiles[0].full_name || name;
+                        } else if (typeof inf.profiles === 'object') {
+                            name = inf.profiles.full_name || name;
+                        }
+                    }
+                    // Fallback to direct columns if join failed but data exists
+                    if (name === 'Influencer' && (inf.name || inf.full_name)) {
+                        name = inf.name || inf.full_name;
+                    }
+
                     const profileUrl = inf.image_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
 
                     const delay = index * 0.1;
@@ -303,21 +316,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Prepare Social Links
                     let socialHtml = '';
-                    if (inf.instagram) socialHtml += `<a href="${inf.instagram}" target="_blank" title="Instagram" class="social-icon insta"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Insta"></a>`;
-                    if (inf.facebook) socialHtml += `<a href="${inf.facebook}" target="_blank" title="Facebook" class="social-icon fb"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="FB"></a>`;
-                    if (inf.youtube) socialHtml += `<a href="${inf.youtube}" target="_blank" title="YouTube" class="social-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT"></a>`;
+                    if (inf.instagram) socialHtml += `<a href="${inf.instagram}" target="_blank" title="Instagram" class="social-icon insta"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Insta" class="social-icon-img"></a>`;
+                    if (inf.facebook) socialHtml += `<a href="${inf.facebook}" target="_blank" title="Facebook" class="social-icon fb"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="FB" class="social-icon-img"></a>`;
+                    if (inf.youtube) socialHtml += `<a href="${inf.youtube}" target="_blank" title="YouTube" class="social-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT" class="social-icon-img"></a>`;
 
                     if (!socialHtml) socialHtml = '<span class="text-muted" style="font-size:0.8rem;">Socials coming soon</span>';
 
                     card.innerHTML = `
-                        <div class="influencer-img-wrapper">
-                            <img src="${profileUrl}" alt="${name}" loading="lazy">
-                        </div>
+                    <div class="influencer-img-wrapper">
+                        <img src="${profileUrl}" alt="${name}" loading="lazy">
+                    </div>
+                    <div class="influencer-info">
                         <h3 class="influencer-name">${name}</h3>
                         <div class="influencer-contact social-links">
                             ${socialHtml}
                         </div>
-                    `;
+                    </div>
+                `;
                     influencersContainer.appendChild(card);
                 });
 
@@ -360,46 +375,46 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create Profile Dropdown
         const profileContainer = document.createElement('div');
         profileContainer.className = 'auth-profile-dropdown';
-        profileContainer.style.position = 'relative';
-        profileContainer.style.marginRight = '1.5rem';
-        profileContainer.style.cursor = 'pointer';
-        profileContainer.style.display = 'inline-block';
+        Object.assign(profileContainer.style, {
+            position: 'relative',
+            marginRight: window.innerWidth < 768 ? '3.5rem' : '1.5rem', // More space on mobile for hamburger
+            cursor: 'pointer',
+            display: 'inline-block',
+            zIndex: '1100' // Ensure above other elements but below menu
+        });
 
         // Profile Avatar HTML
-        // Use Brand Green Border + Light Grey Background for premium feel matching logo/theme.
         profileContainer.innerHTML = `
-            <div class="profile-trigger" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
-                <div style="width: 40px; height: 40px; background: #E6E2DC; color: #184E4A; border: 2px solid #184E4A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                    ${initial}
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                    <span class="profile-name" style="color: #1F2F2E; font-size: 0.8rem; font-weight: 600;">${name.split(' ')[0]}</span>
-                    <span style="color: #184E4A; font-size: 0.7rem;">▼</span>
-                </div>
+        <div class="profile-trigger" style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 38px; height: 38px; background: #ffd700; color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                ${initial}
             </div>
-            
-            <div class="profile-menu" style="
-                display: none;
-                position: absolute;
-                top: 110%; /* moved down slightly */
-                right: -10px; /* shift left to align better under corner */
-                background: #1a1a1a;
-                border: 1px solid #333;
-                border-radius: 8px;
-                min-width: 160px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                padding: 0.5rem 0;
-                z-index: 1000;
-            ">
-                ${(role === 'influencer' || role === 'admin') ? `
-                <a href="/${role}/" style="display: block; padding: 10px 20px; color: #fff; text-decoration: none; font-size: 0.9rem; transition: background 0.2s;">
-                    Dashboard
-                </a>` : ''}
-                <div id="header-logout" style="display: block; padding: 10px 20px; color: #ff4d4d; text-decoration: none; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;">
-                    Sign Out
-                </div>
+            <span class="desktop-only" style="color: #fff; font-size: 0.95rem; font-weight: 500;">${name.split(' ')[0]}</span>
+            <span style="color: #ffd700; font-size: 1.2rem; margin-left: 2px;">▼</span> <!-- Larger Arrow -->
+        </div>
+        
+        <div class="profile-menu" style="
+            display: none;
+            position: absolute;
+            top: 120%;
+            right: 0;
+            background: #1e1e1e;
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            padding: 0.5rem 0;
+            z-index: 1000;
+        ">
+            ${(role === 'influencer' || role === 'admin') ? `
+            <a href="/${role}/" style="display: block; padding: 12px 20px; color: #fff; text-decoration: none; font-size: 1rem; border-bottom: 1px solid #333;">
+                Dashboard
+            </a>` : ''}
+            <div id="header-logout" style="display: block; padding: 12px 20px; color: #ff4d4d; text-decoration: none; font-size: 1rem; cursor: pointer;">
+                Sign Out
             </div>
-        `;
+        </div>
+    `;
 
         // Insert before the menu toggle
         const menuToggle = headerCta.querySelector('.menu-toggle');

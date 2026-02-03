@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Influencer Dashboard - NDelight</title>
+    <link rel="icon" type="image/png" href="/logo.png">
+    <style>
+        /* Reuse Admin Styles for consistency */
+        body {
+            background-color: #121212;
+            color: #fff;
+        }
+
+        .admin-header {
+            background: #1a1a1a;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .admin-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e1e1e, #252525);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #2a2a2a;
+            color: #ffd700;
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/influencer-DVGKz4ZO.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/supabase-DgD8GzGi.js">
+  <link rel="stylesheet" crossorigin href="/assets/style-BPtz6qii.css">
+</head>
+
+<body>
+    <div class="admin-header">
+        <h2>Influencer Dashboard</h2>
+        <div id="userInfo">Loading...</div>
+        <button id="logoutBtn"
+            style="background:none; border:1px solid #ff6b6b; color:#ff6b6b; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
+    </div>
+
+    <div class="admin-content">
+        <!-- Profile Section -->
+        <div
+            style="background: #1e1e1e; padding: 2rem; border-radius: 12px; border: 1px solid #333; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: #ffd700; margin: 0;">Your Public Profile</h3>
+                <div style="display:flex; gap:10px;">
+                    <a href="/index.html#influencers" target="_blank" class="btn btn-outline"
+                        style="padding: 10px 20px; font-size: 0.9rem; border:1px solid #444; color:#aaa; text-decoration:none; border-radius:6px; background:#1a1a1a;">View
+                        Public 🔗</a>
+                    <button id="saveProfileBtn" class="btn btn-primary"
+                        style="padding: 10px 20px; font-size: 0.9rem;">Save Changes</button>
+                </div>
+            </div>
+
+            <form id="profileForm"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                <!-- Left Col -->
+                <div>
+                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Display Name (From Profile)</label>
+                    <input type="text" id="dispName" disabled
+                        style="width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: #888; border-radius: 6px;">
+                </div>
+
+                <div>
+                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Contact Email (Public)</label>
+                    <input type="email" id="publicEmail" placeholder="contact@example.com"
+                        style="width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                </div>
+
+                <div>
+                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Phone Number</label>
+                    <input type="tel" id="phone" placeholder="+91 9876543210"
+                        style="width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                </div>
+
+                <div>
+                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Profile Image</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="imageUrl" placeholder="Image URL will appear here" readonly
+                            style="flex:1; padding: 12px; background: #252525; border: 1px solid #444; color: #888; border-radius: 6px;">
+
+                        <label for="imageUpload" class="btn btn-action"
+                            style="cursor:pointer; white-space:nowrap; display:inline-block; padding:10px 15px; background:#ffd700; color:#000; border-radius:6px; font-weight:bold;">
+                            Upload Photo 📸
+                            <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+                        </label>
+                    </div>
+                    <small id="uploadStatus" style="color:#aaa; margin-top:5px; display:block;"></small>
+                </div>
+
+                <!-- Socials -->
+                <div style="grid-column: 1 / -1;">
+                    <h4
+                        style="color: #ccc; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem;">
+                        Social Links</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <input type="url" id="instagram" placeholder="Instagram URL"
+                            style="padding: 10px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                        <input type="url" id="facebook" placeholder="Facebook URL"
+                            style="padding: 10px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                        <input type="url" id="youtube" placeholder="YouTube URL"
+                            style="padding: 10px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                    </div>
+                </div>
+            </form>
+            <div id="saveMsg" style="margin-top: 1rem; text-align: right; min-height: 1.2em;"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Your Code</div>
+                <div class="stat-number" id="promoCode">---</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-number" id="totalBookings">0</div>
+            </div>
+
+        </div>
+
+        <h3 style="margin-top: 3rem; color: #ffd700;">Your Bookings</h3>
+        <div id="bookingsTable">Loading bookings...</div>
+    </div>
+
+</body>
+
+</html>
