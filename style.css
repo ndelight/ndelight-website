@@ -207,6 +207,7 @@ ul {
     align-items: center;
     text-align: center;
     line-height: 1.1;
+    gap: 4px;
 }
 
 .brand-title {
@@ -1138,3 +1139,5 @@ ul {
     background: var(--color-bg);
     min-height: 80vh;
 }
+.btn-delete { background-color: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.btn-delete:hover { background-color: #cc0000; }

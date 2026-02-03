@@ -10,5 +10,14 @@
     },
     "devDependencies": {
         "vite": "^6.4.1"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.93.3",
+        "body-parser": "^2.2.2",
+        "cors": "^2.8.6",
+        "crypto": "^1.0.1",
+        "dotenv": "^17.2.3",
+        "express": "^5.2.1",
+        "razorpay": "^2.9.6"
     }
 }

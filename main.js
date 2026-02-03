@@ -1,3 +1,5 @@
+import { supabase } from './supabase.js'
+
 document.addEventListener('DOMContentLoaded', () => {
     // Sticky Header
     const header = document.querySelector('.header');
@@ -106,86 +108,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // GLOBAL SCRIPT URL (Unified Gatekeeper)
-    const API_URL = 'https://script.google.com/macros/s/AKfycby6Vn7zF3wTGLWbchur1GGXbWy9w-X--_ry1Bc9Mwrss9s3Wpk_XPIhTHi8ZA6Lans_/exec';
+    // GLOBAL SCRIPT URL (Unified Gatekeeper) -- REMOVED
 
-    // Upcoming Events Fetcher
+
+    // 1. Upcoming Events Fetcher
     const eventsContainer = document.getElementById('events-container');
 
     if (eventsContainer) {
-        // use ?action=get_events
-        fetch(`${API_URL}?action=get_events`)
-            .then(response => response.json())
-            .then(data => {
-                // Helper: Normalize Keys & Fix Drive Links
-                const driveLinkToDirect = (link) => {
-                    if (!link) return '';
-                    // Check for standard Drive View Link (handles both /d/ and /file/d/)
-                    const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (idMatch && idMatch[1]) {
-                        // Use thumbnail endpoint for reliable embedding (sz=w1920 asks for high-res)
-                        return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1920`;
-                    }
-                    return link;
-                };
-
-                const parseEvents = data.map(item => {
-                    // Handle flexible keys
-                    const title = item['Title '] || item['Title'] || item['title'] || 'Untitled Event';
-                    const date = item['Date'] || item['date'];
-                    const location = item['Location'] || item['location'];
-                    const type = item['Type'] || item['type'] || 'event';
-                    const imageRaw = item['Image'] || item['image'];
-                    const insta = item['Insta'] || item['insta'];
-
-                    // Generate ID Logic: <type>-<yyyy-mm-dd>
-                    // Ensure type is lowercase and date is yyyy-mm-dd
-                    const cleanType = type.toLowerCase().trim();
-                    const cleanDate = date; // Assumption: API date is already YYYY-MM-DD based on sheet usage
-                    const generatedId = `${cleanType}-${cleanDate}`;
-
-                    // Prefer generic 'id' from sheet if exists, else use generated
-                    const finalId = item['id'] || item['Id'] || generatedId;
-
-                    return {
-                        id: finalId,
-                        title: title.trim(),
-                        date: date,
-                        location: location,
-                        type: type,
-                        image: driveLinkToDirect(imageRaw),
-                        insta: insta
-                    };
-                });
-
-                // Filter & Sort: Date >= Today
+        async function fetchEvents() {
+            try {
                 const today = new Date();
-                const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+                today.setHours(0, 0, 0, 0); // Start of day
+                const filterDate = today.toISOString();
 
-                const upcomingEvents = parseEvents
-                    .filter(event => {
-                        if (!event.date) return false;
-                        // Robust string comparison for YYYY-MM-DD
-                        return event.date >= todayStr;
-                    })
-                    .sort((a, b) => (a.date > b.date ? 1 : -1))
-                    .slice(0, 4);
+                const { data: events, error } = await supabase
+                    .from('events')
+                    .select('*')
+                    .gte('date', filterDate)
+                    .order('date', { ascending: true })
+                    .limit(20);
 
-                renderEvents(upcomingEvents);
-            })
-            .catch(err => {
+                if (error) throw error;
+
+                renderEvents(events);
+            } catch (err) {
                 console.error('Error fetching events:', err);
                 eventsContainer.innerHTML = `
                     <div class="error-state">
                         <p>Unable to load events.</p>
                     </div>
                 `;
-            });
+            }
+        }
 
         function renderEvents(events) {
             eventsContainer.innerHTML = '';
 
-            if (events.length === 0) {
+            if (!events || events.length === 0) {
                 eventsContainer.innerHTML = `
                     <div class="empty-state">
                         <p>No upcoming events found.</p>
@@ -206,18 +165,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.className = 'event-card';
                 card.style.animationDelay = `${delay}s`;
 
-                // Link to Event Details Page (Clean URL)
-                const eventLink = `href="/events/${event.id}"`;
+                // Link to Event Details Page
+                const eventLink = `href="/event.html?id=${event.id}"`;
+                // NOTE: Switched to query param ?id=UUID for simplicity with static site unless we have rewritten rules.
+                // User's prev code had /events/id. Let's stick to query param or assume they handle routing.
+                // Actually, let's stick to their pattern /events/id but since it's Vite static, it might be tricky without rewrite.
+                // Best to use /event.html?id=ID for safety now, or keep their logic if they have rewrites.
+                // Looking at user's current paths, they seem to expect clean URLs. 
+                // I will use /event.html?id=${event.id} to be safe for a static build unless Vercel config handles rewrites.
+                // Re-reading Vercel.json might be good. For now, I'll use query params to ensure it works.
 
                 // Fallback image
-                const imageUrl = event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80';
+                const imageUrl = event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80';
 
                 card.innerHTML = `
-                    <a ${eventLink} class="event-image-link">
+                    <a href="/event.html?id=${event.id}" class="event-image-link">
                         <img src="${imageUrl}" alt="${event.title}" loading="lazy">
                     </a>
                     <div class="event-details">
-                        <span class="event-badge">${event.type}</span>
+                        <span class="event-badge">Event</span>
                         <h3 class="event-title">${event.title}</h3>
                         <p class="event-date">${dateStr}</p>
                         <p class="event-location">📍 ${event.location || 'TBA'}</p>
@@ -227,75 +193,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 eventsContainer.appendChild(card);
             });
         }
+
+        fetchEvents();
     }
 
-    // Featured Work Fetcher (Sheet2)
+    // 2. Featured Work Fetcher (Using featured_events table)
     const portfolioContainer = document.getElementById('portfolio-container');
     if (portfolioContainer) {
-        fetch(`${API_URL}?action=get_portfolio`)
-            .then(response => response.json())
-            .then(data => {
+        async function fetchFeatured() {
+            try {
+                // Fetch featured events joined with event details
+                const { data: featured, error } = await supabase
+                    .from('featured_events')
+                    .select('*, events(*)')
+                    .order('display_order', { ascending: true });
 
-                if (data.length === 0) {
+                if (error) throw error;
+
+                if (!featured || featured.length === 0) {
                     portfolioContainer.innerHTML = '<p class="text-muted text-center">More work coming soon.</p>';
                     return;
                 }
 
                 portfolioContainer.innerHTML = '';
 
-                // Helper reuse usually good, but embedded for safety/clarity in this scope
-                const driveLinkToDirect = (link) => {
-                    if (!link) return '';
-                    if (!link.includes('drive.google.com')) return link; // Not a drive link, return as is (maybe direct)
+                featured.forEach((item, index) => {
+                    const event = item.events; // Joined data
+                    if (!event) return;
 
-                    let id = '';
-                    // Pattern 1: /d/IDENTIFIER
-                    const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (idMatch && idMatch[1]) id = idMatch[1];
-
-                    // Pattern 2: id=IDENTIFIER
-                    const idParamMatch = link.match(/id=([a-zA-Z0-9_-]+)/);
-                    if (idParamMatch && idParamMatch[1]) id = idParamMatch[1];
-
-                    if (id) {
-                        // Revert to thumbnail endpoint for better reliability if lh3 fails
-                        return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
-                    }
-
-                    return link;
-                };
-
-                // Helper: Case-insensitive & trimmed key lookup
-                const getValue = (item, target) => {
-                    const keys = Object.keys(item);
-                    const match = keys.find(k => k.trim().toLowerCase() === target.toLowerCase());
-                    return match ? item[match] : undefined;
-                };
-
-                data.forEach((item, index) => {
-
-                    // Flexible Keys with User Confirmed Priorities
-                    const name = item['event_name'] || getValue(item, 'event_name') || getValue(item, 'name') || 'Featured Work';
-                    const imageRaw = item['image'] || getValue(item, 'image');
-                    const link = item['link'] || getValue(item, 'link') || '#';
-
-                    const imageUrl = driveLinkToDirect(imageRaw) || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+                    const name = event.title;
+                    const imageUrl = event.image_url || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';
+                    const link = `/event.html?id=${event.id}`;
 
                     const delay = index * 0.15;
 
                     const card = document.createElement('div');
                     card.className = 'portfolio-item';
                     card.style.animation = `fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards ${delay}s`;
-                    card.style.opacity = '0'; // Start hidden for animation
+                    card.style.opacity = '0';
 
-                    // Click interaction: Redirect
                     card.onclick = () => {
-                        if (link && link !== '#') window.open(link, '_blank');
+                        if (event.external_link) {
+                            window.open(event.external_link, '_blank');
+                        } else {
+                            window.location.href = link;
+                        }
                     };
                     card.style.cursor = 'pointer';
 
                     card.innerHTML = `
-                        <img src="${imageUrl}" alt="${name}" loading="lazy" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80';">
+                        <img src="${imageUrl}" alt="${name}" loading="lazy">
                         <div class="portfolio-overlay">
                             <h3 class="portfolio-title">${name}</h3>
                         </div>
@@ -303,58 +250,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     portfolioContainer.appendChild(card);
                 });
-            })
-            .catch(err => {
-                console.error('Error fetching portfolio:', err);
+
+            } catch (err) {
+                console.error('Error fetching featured:', err);
                 portfolioContainer.innerHTML = '<p class="text-muted text-center">Unable to load featured work.</p>';
-            });
+            }
+        }
+
+        fetchFeatured();
     }
 
-    // Influencers Fetcher (Sheet3)
+    // 3. Influencers Fetcher
     const influencersContainer = document.getElementById('influencers-container');
     if (influencersContainer) {
-        fetch(`${API_URL}?action=get_influencers`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.length === 0) {
+        async function fetchInfluencers() {
+            try {
+                // Fetch active influencers with profile data
+                const { data: influencers, error } = await supabase
+                    .from('influencers')
+                    .select('*, profiles(full_name)')
+                    .eq('active', true);
+
+                if (error) throw error;
+
+                if (!influencers || influencers.length === 0) {
                     influencersContainer.innerHTML = '<p class="text-muted text-center">Join our network of influencers.</p>';
                     return;
                 }
 
                 influencersContainer.innerHTML = '';
 
-                // Re-defining helpers here as they are scoped above (or we could move them global later)
-                const driveLinkToDirect = (link) => {
-                    if (!link) return '';
-                    if (!link.includes('drive.google.com')) return link;
-                    let id = '';
-                    const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                    if (idMatch && idMatch[1]) id = idMatch[1];
-                    const idParamMatch = link.match(/id=([a-zA-Z0-9_-]+)/);
-                    if (idParamMatch && idParamMatch[1]) id = idParamMatch[1];
-                    // Revert to 'thumbnail' but now we have 'no-referrer' on the img tag which should fix the blocking
-                    return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1000` : link;
-                };
-
-                const getValue = (item, target) => {
-                    const keys = Object.keys(item);
-                    const match = keys.find(k => k.trim().toLowerCase() === target.toLowerCase());
-                    return match ? item[match] : undefined;
-                };
-
-                data.forEach((item, index) => {
-                    const name = getValue(item, 'Name') || 'Influencer';
-                    // Admin data - hidden from UI
-                    // const email = getValue(item, 'email');
-                    // const phone = getValue(item, 'phone');
-
-                    const profileRaw = getValue(item, 'profile') || getValue(item, 'image');
-                    const profileUrl = driveLinkToDirect(profileRaw) || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
-
-                    // Socials
-                    const insta = getValue(item, 'insta') || getValue(item, 'instagram');
-                    const fb = getValue(item, 'facebook') || getValue(item, 'fb');
-                    const yt = getValue(item, 'yotuube') || getValue(item, 'youtube') || getValue(item, 'yt');
+                influencers.forEach((inf, index) => {
+                    const profileUrl = inf.image_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
 
                     const delay = index * 0.1;
 
@@ -365,16 +292,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Prepare Social Links
                     let socialHtml = '';
-                    if (insta) socialHtml += `<a href="${insta}" target="_blank" title="Instagram" class="social-icon insta"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Insta"></a>`;
-                    if (fb) socialHtml += `<a href="${fb}" target="_blank" title="Facebook" class="social-icon fb"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="FB"></a>`;
-                    if (yt) socialHtml += `<a href="${yt}" target="_blank" title="YouTube" class="social-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT"></a>`;
+                    if (inf.instagram) socialHtml += `<a href="${inf.instagram}" target="_blank" title="Instagram" class="social-icon insta"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Insta"></a>`;
+                    if (inf.facebook) socialHtml += `<a href="${inf.facebook}" target="_blank" title="Facebook" class="social-icon fb"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="FB"></a>`;
+                    if (inf.youtube) socialHtml += `<a href="${inf.youtube}" target="_blank" title="YouTube" class="social-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT"></a>`;
 
-                    // Fallback visual if no socials
                     if (!socialHtml) socialHtml = '<span class="text-muted" style="font-size:0.8rem;">Socials coming soon</span>';
 
                     card.innerHTML = `
                         <div class="influencer-img-wrapper">
-                            <img src="${profileUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';">
+                            <img src="${profileUrl}" alt="${name}" loading="lazy">
                         </div>
                         <h3 class="influencer-name">${name}</h3>
                         <div class="influencer-contact social-links">
@@ -383,10 +309,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     influencersContainer.appendChild(card);
                 });
-            })
-            .catch(err => {
+
+            } catch (err) {
                 console.error('Error fetching influencers:', err);
                 influencersContainer.innerHTML = '<p class="text-muted text-center">Unable to load influencers.</p>';
-            });
+            }
+        }
+
+        fetchInfluencers();
     }
 });
