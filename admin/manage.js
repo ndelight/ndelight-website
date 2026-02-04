@@ -310,11 +310,69 @@ window.deleteInfluencer = async (id) => {
         return;
     }
 
-    // 2. Set profile role back to user (optional, keeps account but removes influencer status)
+    // 2. Set profile role back to user (optional)
     await supabase.from('profiles').update({ role: 'user' }).eq('id', id)
-
     await loadInfluencers(document.getElementById('dynamicContent'))
 }
+
+// -------------------------------------------------------------
+// PATCH: Add Email Trigger to Approve Function
+// (Re-defining approveInfluencer to include email logic)
+window.approveInfluencer = async (userId, fullName, btnElement) => {
+    if (!confirm(`Approve ${fullName} as an Influencer?`)) return
+
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.textContent = 'Processing...';
+    }
+
+    // 1. Generate Code
+    const nameParts = (fullName || 'USER').trim().split(/\s+/);
+    const nameOne = nameParts[0] ? nameParts[0][0].toUpperCase() : 'U';
+    const nameTwo = nameParts.length > 1 ? nameParts[1][0].toUpperCase() : nameOne;
+    const shortInitials = (nameOne + nameTwo).replace(/[^A-Z]/g, 'X');
+
+    const uniqueSuffix = userId.split('-').pop().slice(-4).toUpperCase();
+    const code = `${shortInitials}${uniqueSuffix}`;
+
+    // 2. Create Influencer Record
+    const { error: infError } = await supabase.from('influencers').insert([{
+        id: userId,
+        code: code,
+        active: true
+    }])
+
+    if (infError) {
+        alert('Error creating influencer record: ' + infError.message)
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.textContent = 'Approve ✅';
+        }
+        return
+    }
+
+    // 3. Update Profile Role
+    const { error: profileError } = await supabase.from('profiles').update({ role: 'influencer' }).eq('id', userId)
+
+    if (profileError) {
+        alert('Error updating profile: ' + profileError.message)
+    } else {
+        // --- TRIGGER EMAIL ---
+        try {
+            await fetch('http://localhost:3000/api/send-approval-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ influencer_id: userId })
+            });
+            console.log('Approval email triggered');
+        } catch (err) {
+            console.error('Email trigger failed', err);
+        }
+        // ---------------------
+        await loadPending(document.getElementById('dynamicContent'))
+    }
+}
+
 
 async function loadInfluencers(container) {
     const { data: influencers } = await supabase.from('influencers').select('*, profiles(full_name, email)')

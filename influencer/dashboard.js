@@ -12,7 +12,7 @@ async function initDashboard() {
     // 2. Get Profile First
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, role')
+        .select('full_name, email, role, email_verified')
         .eq('id', session.user.id)
         .single()
 
@@ -73,18 +73,166 @@ async function initDashboard() {
         `
         document.getElementById('promoCode').textContent = influencer.code
 
-        // Populate Profile Form
-        document.getElementById('dispName').value = profile.full_name || ''
-        document.getElementById('publicEmail').value = influencer.public_email || profile.email || '' // Default to profile email if public is unset
-        document.getElementById('phone').value = influencer.phone || ''
-        document.getElementById('imageUrl').value = influencer.image_url || ''
-        document.getElementById('instagram').value = influencer.instagram || ''
-        document.getElementById('facebook').value = influencer.facebook || ''
-        document.getElementById('youtube').value = influencer.youtube || ''
+
+        // Render Profile
+        document.getElementById('dispName').value = profile.full_name || '';
+        document.getElementById('publicEmail').value = profile.email || ''; // Assuming email is now in profiles or fetched
+        // Wait, did we fetch email? Line 19: .select('*') -> yes.
+        document.getElementById('phone').value = profile.phone || '';
+        document.getElementById('imageUrl').value = profile.avatar_url || '';
+        document.getElementById('instagram').value = profile.social_instagram || '';
+        document.getElementById('facebook').value = profile.social_facebook || '';
+        document.getElementById('youtube').value = profile.social_youtube || '';
+
+        // Verification UI
+        const verifiedBadge = document.getElementById('verifiedBadge');
+        const verifyBtn = document.getElementById('verifyEmailBtn');
+
+        if (profile.email_verified) {
+            verifiedBadge.style.display = 'inline-block';
+            verifyBtn.style.display = 'none';
+        } else {
+            verifiedBadge.style.display = 'none';
+            verifyBtn.style.display = 'inline-block';
+        }
+
+        // --- OTP Logic ---
+        const otpModal = document.getElementById('otpModal');
+        const otpInput = document.getElementById('otpInput');
+        const submitOtpBtn = document.getElementById('submitOtpBtn');
+        const resendOtpBtn = document.getElementById('resendOtpBtn');
+        const closeOtpBtn = document.getElementById('closeOtpBtn');
+        const otpMsg = document.getElementById('otpMsg');
+        const otpTimer = document.getElementById('otpTimer');
+
+        let cooldownInterval;
+
+        // Open Modal & Send OTP
+        verifyBtn.addEventListener('click', async () => {
+            alert('Debug: Verify Button Clicked. Opening Modal...');
+            otpModal.style.display = 'flex';
+            otpInput.value = '';
+            otpMsg.textContent = '';
+            otpTimer.textContent = '';
+            await sendOtp();
+        });
+
+        // Close Modal
+        closeOtpBtn.addEventListener('click', () => {
+            otpModal.style.display = 'none';
+        });
+
+        // Send OTP Function
+        async function sendOtp() {
+            otpMsg.style.color = '#fff';
+            otpMsg.textContent = 'Sending code...';
+            resendOtpBtn.style.display = 'none';
+
+            try {
+                // Using 127.0.0.1 for reliability
+                const res = await fetch('http://127.0.0.1:3000/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: session.user.id,
+                        email: profile.email || session.user.email
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    otpMsg.style.color = '#51cf66';
+                    otpMsg.textContent = 'Code sent! Check your email.';
+                    startCooldown(10);
+                } else {
+                    otpMsg.style.color = '#ff6b6b';
+                    otpMsg.textContent = data.error || 'Failed to send OTP';
+                    resendOtpBtn.style.display = 'inline-block';
+                }
+            } catch (err) {
+                console.error('OTP Client Error:', err);
+                otpMsg.textContent = 'Connection Error. Is server running?';
+                otpMsg.style.color = '#ff6b6b';
+                resendOtpBtn.style.display = 'inline-block';
+            }
+        }
+
+        // Resend Click
+        resendOtpBtn.addEventListener('click', sendOtp);
+
+        // Cooldown Timer
+        function startCooldown(seconds) {
+            let left = seconds;
+            resendOtpBtn.style.display = 'none';
+            otpTimer.textContent = `Resend available in ${left}s`;
+
+            clearInterval(cooldownInterval);
+            cooldownInterval = setInterval(() => {
+                left--;
+                otpTimer.textContent = `Resend available in ${left}s`;
+                if (left <= 0) {
+                    clearInterval(cooldownInterval);
+                    otpTimer.textContent = '';
+                    resendOtpBtn.style.display = 'inline-block';
+                }
+            }, 1000);
+        }
+
+        // Verify OTP Action
+        submitOtpBtn.addEventListener('click', async () => {
+            const code = otpInput.value.trim();
+            if (code.length !== 6) {
+                otpMsg.style.color = '#ff6b6b';
+                otpMsg.textContent = 'Enter a 6-digit code';
+                return;
+            }
+
+            otpMsg.style.color = '#fff';
+            otpMsg.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: session.user.id,
+                        otp: code
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    otpMsg.style.color = '#51cf66';
+                    otpMsg.textContent = 'Verified!';
+                    setTimeout(() => {
+                        otpModal.style.display = 'none';
+                        verifiedBadge.style.display = 'inline-block';
+                        verifyBtn.style.display = 'none';
+                        // Ideally update local profile state too
+                        profile.email_verified = true;
+                    }, 1500);
+                } else {
+                    otpMsg.style.color = '#ff6b6b';
+                    otpMsg.textContent = data.error || 'Verification failed';
+                }
+            } catch (err) {
+                otpMsg.textContent = 'Network Error';
+            }
+        });
+
+        // --------------------------------------------------
 
         // Load bookings
         loadBookings(influencer.code)
     } else {
+        // If not influencer/active, check if pending
+        if (profile.role === 'pending_influencer') {
+            window.location.href = '/pending.html';
+            return;
+        }
+
+        // Fallback for completely unknown roles
         document.getElementById('userInfo').textContent = `User: ${profile.full_name} (Not Active)`
         document.getElementById('bookingsTable').innerHTML = '<p>Account pending activation.</p>'
     }

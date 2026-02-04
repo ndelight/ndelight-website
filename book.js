@@ -257,6 +257,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (error) throw error;
 
+                // --- TRIGGER EMAIL FOR FREE BOOKING ---
+                try {
+                    if (data.id) {
+                        await fetch('http://localhost:3000/api/send-booking-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ booking_id: data.id })
+                        });
+                    }
+                } catch (err) {
+                    console.error('Free booking email trigger failed:', err);
+                }
+                // -------------------------------------
+
                 // Redirect to success
                 window.location.href = `/success.html?booking_id=${data.id}&payment_id=free_event`;
 
@@ -300,7 +314,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: displayTitle.textContent,
                 image: "/logo.png",
                 order_id: orderData.order_id,
-                handler: function (response) {
+                handler: async function (response) {
+                    console.log('Payment Success:', response);
+
+                    // Show temporary success UI to prevent quick redirect before email trigger
+                    submitBtn.textContent = 'Verifying...';
+
+                    // --- TRIGGER EMAIL ---
+                    try {
+                        if (orderData.booking_id) {
+                            await fetch('http://localhost:3000/api/send-booking-email', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ booking_id: orderData.booking_id })
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Email trigger failed:', err);
+                    }
+                    // ---------------------
+
                     window.location.href = `/success.html?booking_id=${orderData.booking_id}&payment_id=${response.razorpay_payment_id}`;
                 },
                 prefill: orderData.prefill,

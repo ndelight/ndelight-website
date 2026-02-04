@@ -119,8 +119,14 @@
 
                 <div>
                     <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Contact Email (Protected)</label>
-                    <input type="email" id="publicEmail" placeholder="Cannot be changed" readonly
-                        style="width: 100%; padding: 12px; background: #1f1f1f; border: 1px solid #333; color: #666; border-radius: 6px; cursor: not-allowed;">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="email" id="publicEmail" placeholder="Cannot be changed" readonly
+                            style="flex: 1; padding: 12px; background: #1f1f1f; border: 1px solid #333; color: #666; border-radius: 6px; cursor: not-allowed;">
+                        <span id="verifiedBadge" style="display:none; color:#51cf66; font-size:0.9rem;">✅
+                            Verified</span>
+                        <button type="button" id="verifyEmailBtn" class="btn btn-outline"
+                            style="display:none; padding: 10px 15px; font-size: 0.85rem; border:1px solid #ffd700; color:#ffd700; background:transparent; border-radius:6px; cursor:pointer;">Verify</button>
+                    </div>
                 </div>
 
                 <div>
@@ -177,6 +183,32 @@
 
         <h3 style="margin-top: 3rem; color: #ffd700;">Your Bookings</h3>
         <div id="bookingsTable">Loading bookings...</div>
+    </div>
+
+    <!-- OTP Modal -->
+    <div id="otpModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div
+            style="background:#1e1e1e; padding:2rem; border-radius:12px; border:1px solid #333; width:100%; max-width:400px; text-align:center; position:relative;">
+            <h3 style="color:#ffd700; margin-bottom:1rem;">Verify Email</h3>
+            <p style="color:#ccc; margin-bottom:1.5rem;">Enter the 6-digit code sent to your email.</p>
+
+            <input type="text" id="otpInput" placeholder="123456" maxlength="6"
+                style="width:100%; padding:12px; background:#2a2a2a; border:1px solid #444; color:#fff; border-radius:6px; font-size:1.2rem; text-align:center; letter-spacing:5px; margin-bottom:1rem;">
+
+            <button id="submitOtpBtn" class="btn btn-primary"
+                style="width:100%; padding:12px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:1rem;">Verify
+                Code</button>
+
+            <button id="resendOtpBtn"
+                style="background:none; border:none; color:#aaa; font-size:0.9rem; cursor:pointer; text-decoration:underline;">Resend
+                Code</button>
+            <p id="otpTimer" style="color:#666; font-size:0.8rem; margin-top:5px;"></p>
+            <div id="otpMsg" style="margin-top:1rem; min-height:1.2em;"></div>
+
+            <button id="closeOtpBtn"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
     </div>
 
     <script type="module" src="dashboard.js"></script>

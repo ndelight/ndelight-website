@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Pending - NDelight</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 3rem;
+            border-radius: 16px;
+            border: 1px solid #333;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            background: rgba(81, 207, 102, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .icon-tick {
+            font-size: 3rem;
+            color: #51cf66;
+        }
+
+        h1 {
+            color: #ffd700;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        p {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .btn-home {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #ffd700;
+            color: #000;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-2px);
+        }
+
+        .logout-link {
+            display: block;
+            margin-top: 1.5rem;
+            color: #666;
+            font-size: 0.9rem;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="icon-circle">
+            <span class="icon-tick">✓</span>
+        </div>
+        <h1>Application Received!</h1>
+        <p>Thank you for applying to be an influencer at <strong>NDelight</strong>.</p>
+        <p>Our team is reviewing your profile. You will be notified via email once your account is approved.</p>
+
+        <a href="/" class="btn-home">Return to Home</a>
+        <a id="logoutInit" class="logout-link">Logout</a>
+    </div>
+
+    <script type="module">
+        import { supabase } from './supabase.js';
+
+        document.getElementById('logoutInit').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/login.html';
+        });
+    </script>
+</body>
+
+</html>

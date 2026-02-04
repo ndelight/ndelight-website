@@ -66,36 +66,27 @@ authForm.addEventListener('submit', async (e) => {
 
     try {
         if (isSignup) {
-            // --- SIGN UP FLOW ---
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        full_name: fullName,
-                        role: isInfluencer ? 'pending_influencer' : 'user' // Set to pending if influencer checked
-                    }
-                }
-            })
+            // --- NEW: PRE-SIGNUP VERIFICATION ---
+            submitBtn.textContent = 'Sending Verification Code...';
 
-            if (error) throw error
+            // 1. Send OTP
+            const res = await fetch('http://localhost:3000/api/auth/send-otp-pre-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
 
-            // Auto Sign-in happens if email confirmation is disabled, 
-            // otherwise user must check email.
-            // But since user asked for "No invite emails / paid email plans", 
-            // presumably "Confirm Email" is OFF in Supabase or we accept the "Confirm email" step.
-            // If Confirm Email is OFF, data.session will be present.
-
-            if (data.session) {
-                // Check role to decide where to go (or block if pending)
-                checkUserRole(data.user.id)
-            } else {
-                messageDiv.textContent = 'Account created! Please sign in.'
-                messageDiv.classList.add('success')
-                // Switch back to login view
-                toggleBtn.click()
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to send verification code');
             }
+
+            // 2. Show Modal
+            document.getElementById('signupEmailDisplay').textContent = email;
+            document.getElementById('signupOtpModal').style.display = 'flex';
+            submitBtn.textContent = 'Verify Email First';
+            submitBtn.disabled = false; // Re-enable so they can try again if they close modal
+            return; // STOP HERE. Wait for OTP.
 
         } else {
             // --- SIGN IN FLOW ---
@@ -133,17 +124,8 @@ async function checkUserRole(userId) {
         } else if (profile?.role === 'influencer') {
             window.location.href = '/influencer/'
         } else if (profile?.role === 'pending_influencer') {
-            // Block login for pending users
-            await supabase.auth.signOut();
-            messageDiv.innerHTML = `
-                <div style="color: #ffd700; background: rgba(255, 215, 0, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid #ffd700;">
-                    <h3>Application Received ⏳</h3>
-                    <p>Your influencer application is pending approval.</p>
-                </div>
-             `;
-            authForm.style.display = 'block'; // Show login form again
-            document.getElementById('continueBtn')?.remove();
-            document.getElementById('logoutBtn')?.remove();
+            // New Logic: Redirect to Pending Page
+            window.location.href = '/pending.html';
         } else {
             window.location.href = '/'
         }
@@ -152,6 +134,74 @@ async function checkUserRole(userId) {
         // Fallback
         window.location.href = '/'
     }
+}
+
+// Forgot Password Logic
+const forgotLink = document.getElementById('forgotPasswordLink');
+const forgotModal = document.getElementById('forgotModal');
+const closeForgotBtn = document.getElementById('closeForgotBtn');
+const sendResetBtn = document.getElementById('sendResetBtn');
+const forgotEmailInput = document.getElementById('forgotEmail');
+const forgotMsg = document.getElementById('forgotMsg');
+
+if (forgotLink) {
+    forgotLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        forgotModal.style.display = 'flex';
+        forgotEmailInput.value = '';
+        forgotMsg.textContent = '';
+    });
+
+    closeForgotBtn.addEventListener('click', () => {
+        forgotModal.style.display = 'none';
+        forgotMsg.textContent = '';
+    });
+
+    sendResetBtn.addEventListener('click', async () => {
+        const email = forgotEmailInput.value.trim();
+        if (!email) {
+            forgotMsg.style.color = '#ff6b6b';
+            forgotMsg.textContent = 'Please enter your email';
+            return;
+        }
+
+        forgotMsg.style.color = '#fff';
+        forgotMsg.textContent = 'Sending...';
+        sendResetBtn.disabled = true;
+
+        try {
+            const res = await fetch('http://localhost:3000/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                forgotMsg.style.color = '#51cf66';
+                forgotMsg.textContent = data.message;
+                setTimeout(() => {
+                    forgotModal.style.display = 'none';
+                    sendResetBtn.disabled = false;
+                }, 3000);
+            } else {
+                forgotMsg.style.color = '#ff6b6b';
+                forgotMsg.textContent = data.error || 'Request failed';
+                sendResetBtn.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            forgotMsg.textContent = 'Network Error';
+            sendResetBtn.disabled = false;
+        }
+    });
+
+    // Close on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === forgotModal) {
+            forgotModal.style.display = 'none';
+        }
+    });
 }
 
 // Check Session on Load
@@ -206,3 +256,106 @@ supabase.auth.getSession().then(async ({ data: { session } }) => {
         });
     }
 })
+
+// --- NEW: HANDLE SIGNUP OTP VERIFICATION ---
+const signupOtpModal = document.getElementById('signupOtpModal');
+const signupOtpInput = document.getElementById('signupOtpInput');
+const verifySignupOtpBtn = document.getElementById('verifySignupOtpBtn');
+const signupOtpError = document.getElementById('signupOtpError');
+const closeSignupOtpBtn = document.getElementById('closeSignupOtpBtn');
+
+if (closeSignupOtpBtn) {
+    closeSignupOtpBtn.addEventListener('click', () => {
+        signupOtpModal.style.display = 'none';
+        submitBtn.textContent = 'Create Account';
+        submitBtn.disabled = false;
+    });
+}
+
+if (verifySignupOtpBtn) {
+    verifySignupOtpBtn.addEventListener('click', async () => {
+        const otp = signupOtpInput.value.trim();
+        const email = emailInput.value.trim(); // Get from main form
+
+        if (otp.length !== 6) {
+            signupOtpError.textContent = 'Enter 6-digit code';
+            return;
+        }
+
+        verifySignupOtpBtn.textContent = 'Verifying...';
+        signupOtpError.textContent = '';
+
+        try {
+            // 1. Verify OTP
+            const res = await fetch('http://localhost:3000/api/auth/verify-otp-pre-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Invalid Code');
+            }
+
+            // 2. OTP Valid! Now Create Account
+            await processSignup();
+
+        } catch (err) {
+            console.error(err);
+            signupOtpError.textContent = err.message;
+            verifySignupOtpBtn.textContent = 'Verify & Create Account';
+        }
+    });
+}
+
+
+async function processSignup() {
+    verifySignupOtpBtn.textContent = 'Creating Account...';
+
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const fullName = nameInput.value;
+
+    try {
+        // A. Supabase Signup
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    role: isInfluencer ? 'pending_influencer' : 'user'
+                }
+            }
+        });
+
+        if (error) throw error;
+
+        // B. Mark as Verified (Server-Side)
+        if (data.session) {
+            // Call server to mark email_verified = true
+            await fetch('http://localhost:3000/api/auth/mark-verified', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${data.session.access_token}` // Send session token
+                },
+                body: JSON.stringify({ user_id: data.user.id })
+            });
+
+            signupOtpModal.style.display = 'none';
+            checkUserRole(data.user.id);
+        } else {
+            messageDiv.textContent = 'Account created! Please sign in.';
+            messageDiv.classList.add('success');
+            signupOtpModal.style.display = 'none';
+            toggleBtn.click();
+        }
+
+    } catch (err) {
+        signupOtpError.textContent = err.message;
+        verifySignupOtpBtn.textContent = 'Verify & Create Account';
+    }
+}
+

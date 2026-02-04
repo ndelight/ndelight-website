@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - NDelight</title>
+    <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="style.css" />
     <style>
         /* Specific styles for Login to ensure it looks premium */
@@ -131,21 +132,74 @@
             </div>
 
             <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="••••••••" required minlength="6">
+                <label>Password</label>
+                <input type="password" id="password" required />
+                <a href="#" id="forgotPasswordLink"
+                    style="color:#aaa; font-size:0.8rem; float:right; text-decoration:none; margin-top:5px;">Forgot
+                    Password?</a>
             </div>
 
-            <button type="submit" class="btn-login" id="submitBtn">
-                Sign In
-            </button>
+            <button type="submit" class="btn-login" id="submitBtn">Sign In</button>
         </form>
 
-        <p style="margin-top: 1.5rem; color: #ccc; font-size: 0.9rem;">
-            <span id="toggleText">New here?</span>
-            <a href="#" id="toggleBtn" style="color: #ffd700; font-weight: bold; margin-left: 5px;">Create Account</a>
-        </p>
+        <div class="switch-mode">
+            <p id="switchText">Don't have an account? <span id="switchBtn">Sign Up</span></p>
+        </div>
+    </div>
+    </div>
 
-        <div id="message" class="message"></div>
+
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div
+            style="background:#1e1e1e; padding:2rem; border-radius:12px; border:1px solid #333; width:100%; max-width:400px; text-align:center; position:relative;">
+            <h3 style="color:#ffd700; margin-bottom:1rem;">Reset Password</h3>
+            <p style="color:#ccc; margin-bottom:1.5rem;">Enter your email to receive a reset link.</p>
+
+            <input type="email" id="forgotEmail" placeholder="your@email.com"
+                style="width:100%; padding:12px; background:#2a2a2a; border:1px solid #444; color:#fff; border-radius:6px; margin-bottom:1rem;">
+
+            <button id="sendResetBtn" class="btn btn-primary"
+                style="width:100%; padding:12px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Send
+                Link</button>
+            <div id="forgotMsg" style="margin-top:1rem; min-height:1.2em;"></div>
+
+            <button id="closeForgotBtn"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+    </div>
+
+    <!-- Pre-Signup OTP Modal -->
+    <div id="signupOtpModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1100; align-items:center; justify-content:center;">
+        <div
+            style="background:#1e1e1e; padding:2rem; border-radius:12px; border:1px solid #333; width:100%; max-width:400px; text-align:center; position:relative;">
+            <h3 style="color:#ffd700; margin-bottom:1rem;">Verify to Sign Up</h3>
+            <p style="color:#ccc; margin-bottom:1.5rem;">We sent a code to <br><b id="signupEmailDisplay"
+                    style="color:#fff"></b></p>
+
+            <input type="text" id="signupOtpInput" placeholder="123456" maxlength="6"
+                style="width:100%; padding:12px; background:#2a2a2a; border:1px solid #444; color:#fff; border-radius:6px; font-size:1.2rem; text-align:center; letter-spacing:5px; margin-bottom:1rem;">
+
+            <button id="verifySignupOtpBtn" class="btn btn-primary"
+                style="width:100%; padding:12px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:1rem;">Verify
+                & Create Account</button>
+
+            <p id="signupOtpError" style="color:#ff6b6b; font-size:0.9rem; min-height:1.2em;"></p>
+
+            <button id="closeSignupOtpBtn"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+    </div>
+    <p style="margin-top: 1.5rem; color: #ccc; font-size: 0.9rem;">
+        <span id="toggleText">New here?</span>
+        <a href="#" id="toggleBtn" style="color: #ffd700; font-weight: bold; margin-left: 5px;">Create Account</a>
+    </p>
+
+    <div id="message" class="message"></div>
     </div>
 
     <script type="module" src="login.js"></script>
