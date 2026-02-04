@@ -109,7 +109,6 @@ async function initDashboard() {
 
         // Open Modal & Send OTP
         verifyBtn.addEventListener('click', async () => {
-            alert('Debug: Verify Button Clicked. Opening Modal...');
             otpModal.style.display = 'flex';
             otpInput.value = '';
             otpMsg.textContent = '';
