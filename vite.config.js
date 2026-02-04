@@ -37,7 +37,9 @@ export default defineConfig({
                 success: 'success.html',
                 login: 'login.html',
                 admin: 'admin/index.html',
-                influencer: 'influencer/index.html'
+                influencer: 'influencer/index.html',
+                pending: 'pending.html',
+                reset_password: 'reset-password.html'
             }
         }
     }
