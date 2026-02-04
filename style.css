@@ -1074,4 +1074,302 @@ ul {
 .event-detail-header {
     position: relative;
     height: 400px;
+}/* =========================================
+   User Request Update: Centered Card Layout
+   Overrides previous Split Grid layout
+   ========================================= */
+
+/* Force Container Center & Width */
+.event-premium-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    max-width: 1000px !important;
+    margin: 2rem auto !important;
+    gap: 2.5rem !important;
+}
+
+@media (min-width: 992px) {
+    .event-premium-wrapper {
+        grid-template-columns: none !important;
+    }
+}
+
+/* 2️⃣ Event Image Section */
+.event-visuals {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.event-main-image {
+    aspect-ratio: 16/9 !important;
+    /* Ensure landscape for top image */
+    object-fit: cover;
+    max-height: 500px;
+    border-radius: 16px;
+}
+
+/* 3️⃣ Event Content Section */
+.event-info {
+    width: 100%;
+    max-width: 900px;
+    align-items: flex-start !important;
+    /* Left align text */
+    text-align: left !important;
+    padding: 0 1rem;
+    /* Ensure padding on mobile */
+}
+
+.event-title {
+    text-align: left;
+    margin-bottom: 0.5rem;
+}
+
+/* Adjust Meta Grid for Card Layout */
+.event-meta-grid {
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+/* 4️⃣ Booking Button (CTA) */
+.event-actions {
+    width: 100%;
+    align-items: center !important;
+    /* Center button container */
+    margin-top: 2rem;
+}
+
+.btn-block {
+    max-width: 400px !important;
+    /* Limit width on desktop */
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .event-premium-wrapper {
+        margin-top: 1rem !important;
+        gap: 1.5rem !important;
+    }
+
+    .event-visuals {
+        max-width: 100%;
+        border-radius: 0;
+        /* Full width on mobile often looks better without radius or small radius */
+        border-radius: 12px;
+    }
+
+    .btn-block {
+        max-width: 100% !important;
+        /* Full width btn on mobile */
+    }
+
+    .event-title {
+        font-size: 2rem;
+    }
+}
+/* =========================================
+   Global Footer & Layout Fixes
+   ========================================= */
+
+/* Sticky Footer Implementation */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Ensure main content areas grow to push footer down */
+main,
+.section-hero,
+/* Identify other potentially main wrappers */
+.event-page-container {
+    flex: 1 0 auto;
+}
+
+.footer {
+    text-align: center !important;
+    width: 100%;
+    padding: 2rem 0;
+    margin-top: auto !important;
+    /* Push to bottom */
+    background: transparent;
+    /* Or match card bg if user prefers? User said "All rights reserved... everywhere". transparent is fine usually */
+    position: relative;
+    z-index: 10;
+}
+
+.footer p {
+    text-align: center;
+    margin: 0 auto;
+    color: var(--color-text-muted, #888);
+}
+/* =========================================
+   Premium Booking Page Styles
+   ========================================= */
+
+.booking-page-container {
+    padding: calc(var(--header-height) + 3rem) 1rem 3rem;
+    /* Account for fixed header */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    background-image: radial-gradient(circle at top right, rgba(255, 215, 0, 0.05), transparent 40%);
+}
+
+.booking-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    width: 100%;
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    transition: opacity 0.5s ease;
+}
+
+/* Summary Column */
+.booking-summary {
+    background: #1a1a1a;
+    position: relative;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.booking-event-image-container {
+    width: 100%;
+    height: 250px;
+    position: relative;
+    overflow: hidden;
+}
+
+.booking-event-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.booking-summary-content {
+    padding: 2rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.booking-summary h2 {
+    color: var(--color-accent);
+    /* Gold */
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    font-family: var(--font-heading);
+}
+
+.summary-item {
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 0.5rem;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.summary-value {
+    font-size: 1.1rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+#summary-total {
+    color: var(--color-accent);
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Form Column */
+.booking-form-wrapper {
+    padding: 3rem;
+    background: var(--color-bg-card);
+}
+
+.back-link-book {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.back-link-book:hover {
+    color: var(--color-accent);
+}
+
+h1.form-title {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: #fff;
+}
+
+.form-group label {
+    color: #ccc;
+}
+
+.form-group input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border);
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .booking-card {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+    }
+
+    .booking-event-image-container {
+        height: 200px;
+    }
+
+    .booking-form-wrapper {
+        padding: 2rem;
+    }
+}
+
+/* =========================================
+   Footer Color Fix (Gold/Logo Color)
+   ========================================= */
+.footer p,
+.footer {
+    color: var(--color-accent) !important;
+    /* Force Gold */
+    opacity: 0.8;
 }

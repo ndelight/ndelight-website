@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Fetch Data using Supabase
     let ticketPrice = 0;
+    let currentDiscountPercent = 0;
+    let validatedCode = null;
 
     async function fetchEventData() {
         try {
@@ -69,6 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate Summary
         displayTitle.textContent = event.title;
 
+        // Image Logic
+        const summaryImage = document.getElementById('summary-image');
+        if (summaryImage && event.image_url) {
+            summaryImage.src = event.image_url;
+            summaryImage.style.display = 'block';
+        } else if (summaryImage) {
+            // Fallback
+            summaryImage.src = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=600&q=80';
+        }
+
         const dateObj = new Date(event.date);
         displayDate.textContent = isNaN(dateObj) ? event.date : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -79,18 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
         displayPrice.textContent = ticketPrice > 0 ? `₹${ticketPrice}` : 'Free';
 
         // Add External Link Button if exists
-        if (event.external_link) {
-            const btnContainer = document.createElement('div');
-            btnContainer.style.marginTop = '10px';
-            btnContainer.innerHTML = `<a href="${event.external_link}" target="_blank" class="btn btn-outline" style="font-size:0.9rem; padding:8px 12px; display:inline-block; border-color:#ffd700; color:#ffd700;">View on Instagram 📸</a>`;
-            // Insert after title or somewhere appropriate. Let's append to summary container or just after title.
-            // Actually, inserting it into the Summary Grid might be messy.
-            // Let's replace the arrow logic in Title first.
-        }
-
-        // Better Placement:
-        const summaryCard = document.querySelector('.summary-card');
-        if (event.external_link && summaryCard) {
+        const summaryContent = document.querySelector('.booking-summary-content'); // Use new wrapper
+        if (event.external_link && summaryContent) {
             const btn = document.createElement('a');
             btn.href = event.external_link;
             btn.target = "_blank";
@@ -98,12 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.marginTop = "1rem";
             btn.style.width = "100%";
             btn.style.textAlign = "center";
+            btn.style.padding = "0.6rem";
+            btn.style.fontSize = "0.9rem";
             btn.textContent = "View on Instagram 📸";
-            summaryCard.appendChild(btn);
+            summaryContent.appendChild(btn);
         }
 
         // Initial Total
-        updateTotal();
+        calculateTotal();
 
         updateBackLink();
 
@@ -118,22 +122,107 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Calculate Total
-    function updateTotal() {
-        // Enforce max tickets limits if needed or just use input
-        let count = parseInt(ticketsInput.value) || 1;
-        if (count < 1) count = 1;
-        ticketsInput.value = count;
+    function calculateTotal() {
+        let val = ticketsInput.value;
+        if (val === '') {
+            displayTotal.textContent = '₹0';
+            return;
+        }
+        let count = parseInt(val);
+        if (isNaN(count) || count < 0) count = 0;
 
-        const total = count * ticketPrice;
+        let total = count * ticketPrice;
+
+        // Apply Discount
+        if (currentDiscountPercent > 0) {
+            const discountAmount = Math.round(total * (currentDiscountPercent / 100));
+            total = total - discountAmount;
+
+            // Show Discount UI
+            document.getElementById('summary-discount-row').style.display = 'flex';
+            document.getElementById('summary-discount').textContent = `-₹${discountAmount} (${currentDiscountPercent}%)`;
+        } else {
+            document.getElementById('summary-discount-row').style.display = 'none';
+        }
+
         displayTotal.textContent = total > 0 ? `₹${total}` : 'Free';
     }
 
-    ticketsInput.addEventListener('input', updateTotal);
-    ticketsInput.addEventListener('change', updateTotal);
+    // Enforce limits on blur
+    function validateTickets() {
+        let count = parseInt(ticketsInput.value);
+        if (isNaN(count) || count < 1) {
+            count = 1;
+        } else if (count > 10) {
+            count = 10;
+            alert("Maximum 10 tickets per booking.");
+        }
+        ticketsInput.value = count;
+        calculateTotal();
+    }
+
+    ticketsInput.addEventListener('input', calculateTotal);
+    ticketsInput.addEventListener('blur', validateTickets);
+
+
+    // --- Promo Code Logic ---
+    const promoDisplay = document.getElementById('promoCode');
+    const applyPromoBtn = document.getElementById('applyPromoBtn');
+    const promoMessage = document.getElementById('promo-message');
+
+    applyPromoBtn.addEventListener('click', async () => {
+        const code = promoDisplay.value.trim().toUpperCase();
+        if (!code) return;
+
+        applyPromoBtn.textContent = 'Checking...';
+        applyPromoBtn.disabled = true;
+
+        try {
+            const { data, error } = await supabase
+                .from('influencers')
+                .select('code, discount_percent, active')
+                .eq('code', code)
+                .single();
+
+            if (error || !data || !data.active) {
+                throw new Error('Invalid or inactive code');
+            }
+
+            // Success
+            validatedCode = data.code;
+            currentDiscountPercent = data.discount_percent || 0;
+
+            promoMessage.textContent = `Success! Code applied. ${currentDiscountPercent > 0 ? currentDiscountPercent + '% OFF' : ''}`;
+            promoMessage.style.color = '#4cd964';
+
+            // Recalculate
+            calculateTotal();
+
+        } catch (err) {
+            console.log('Promo Error:', err);
+            validatedCode = null;
+            currentDiscountPercent = 0;
+            promoMessage.textContent = 'Invalid Promocode';
+            promoMessage.style.color = '#ff6b6b';
+            calculateTotal();
+        } finally {
+            applyPromoBtn.textContent = 'Apply';
+            applyPromoBtn.disabled = false;
+        }
+    });
+
 
     // 3. Handle Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Re-validate code if user typed but didn't click Apply
+        const enteredCode = promoDisplay.value.trim().toUpperCase();
+        if (enteredCode && enteredCode !== validatedCode) {
+            // Auto-click apply? Or just warn. Let's warn.
+            alert('Please click "Apply" to validate your promo code first.');
+            return;
+        }
 
         const customerInfo = {
             name: document.getElementById('name').value,
@@ -141,11 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: document.getElementById('phone').value,
         };
 
-        const influencerCode = document.getElementById('promoCode').value.trim() || null;
+        const influencerCode = validatedCode; // Use validated one
 
         const totalAmount = parseInt(displayTotal.textContent.replace(/[^0-9]/g, '')) || 0;
 
-        // If free, handle differently? For now, let's assume all paid or we skip razorpay
+        // If free, handle differently?
         if (totalAmount <= 0) {
             // Free Booking Logic
             submitBtn.textContent = 'Processing Free Booking...';
@@ -160,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         customer_email: customerInfo.email,
                         customer_phone: customerInfo.phone,
                         amount: 0,
-                        status: 'paid',
+                        status: 'paid', // Instant success for free
                         influencer_code: influencerCode
                     }])
                     .select()
@@ -180,10 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-
-
-
-
         submitBtn.textContent = 'Processing Payment...';
         submitBtn.disabled = true;
 
@@ -194,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     event_id: eventId,
-                    influencer_code: influencerCode,
+                    influencer_code: influencerCode, // Send validated code
                     customer_info: customerInfo
                 })
             });
@@ -208,17 +293,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Open Razorpay Checkout
             const options = {
-                key: orderData.key_id, // Public Key from API response
+                key: orderData.key_id,
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: "NDelight Events",
                 description: displayTitle.textContent,
-                image: "/logo.png", // Ensure logo exists or use placeholder
+                image: "/logo.png",
                 order_id: orderData.order_id,
-
                 handler: function (response) {
-                    // Payment Success!
-                    // Status is updated via Webhook, but we can redirect to success page
                     window.location.href = `/success.html?booking_id=${orderData.booking_id}&payment_id=${response.razorpay_payment_id}`;
                 },
                 prefill: orderData.prefill,

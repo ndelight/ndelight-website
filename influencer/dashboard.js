@@ -30,9 +30,14 @@ async function initDashboard() {
 
     // 4. Auto-Activate Logic (If Profile exists but Influencer row doesn't)
     if (!influencer && profile.role === 'influencer') {
-        // Generate cleaner code: First Name + 'VIP' (e.g., ABDUVIP)
-        const firstName = (profile.full_name || 'USER').split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
-        const generatedCode = firstName + 'VIP';
+        // Generate cleaner code: First Letter + Second Name Letter (or duplicate first) + Last 4 of UUID
+        const nameParts = (profile.full_name || 'USER').trim().split(/\s+/);
+        const nameOne = nameParts[0] ? nameParts[0][0].toUpperCase() : 'U';
+        const nameTwo = nameParts.length > 1 ? nameParts[1][0].toUpperCase() : nameOne; // Duplicate first if no second name
+        const shortInitials = (nameOne + nameTwo).replace(/[^A-Z]/g, 'X'); // Fallback for special chars
+
+        const uniqueSuffix = session.user.id.split('-').pop().slice(-4).toUpperCase();
+        const generatedCode = `${shortInitials}${uniqueSuffix}`;
 
         console.log('New Influencer - Creating Record with code:', generatedCode);
 

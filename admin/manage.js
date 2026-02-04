@@ -97,9 +97,14 @@ window.approveInfluencer = async (userId, fullName, btnElement) => {
         btnElement.textContent = 'Processing...';
     }
 
-    // 1. Generate Code (Firstname + VIP)
-    const firstName = (fullName || 'USER').split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
-    const code = firstName + 'VIP';
+    // 1. Generate Code (First Letter + Second Name Letter (or duplicate first) + Last 4 of UUID)
+    const nameParts = (fullName || 'USER').trim().split(/\s+/);
+    const nameOne = nameParts[0] ? nameParts[0][0].toUpperCase() : 'U';
+    const nameTwo = nameParts.length > 1 ? nameParts[1][0].toUpperCase() : nameOne; // Duplicate first if no second name
+    const shortInitials = (nameOne + nameTwo).replace(/[^A-Z]/g, 'X'); // Fallback for special chars
+
+    const uniqueSuffix = userId.split('-').pop().slice(-4).toUpperCase();
+    const code = `${shortInitials}${uniqueSuffix}`;
 
     // 2. Create Influencer Record
     const { error: infError } = await supabase.from('influencers').insert([{
@@ -316,11 +321,13 @@ async function loadInfluencers(container) {
 
     let html = '<h3>Influencers</h3>'
     if (influencers && influencers.length > 0) {
-        html += '<table><thead><tr><th>Name</th><th>Code</th><th>Active</th><th>Actions</th></tr></thead><tbody>'
+        html += '<table><thead><tr><th>Name</th><th>Email</th><th>Code</th><th>Active</th><th>Actions</th></tr></thead><tbody>'
         influencers.forEach(inf => {
             const name = inf.profiles ? inf.profiles.full_name : 'Unknown'
+            const email = inf.profiles ? inf.profiles.email : 'No Email'
             html += `<tr>
             <td>${name}</td>
+            <td>${email}</td>
             <td>${inf.code}</td>
             <td>${inf.active ? 'Yes' : 'No'}</td>
             <td>

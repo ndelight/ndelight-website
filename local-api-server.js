@@ -48,7 +48,28 @@ app.post('/api/create-razorpay-order', async (req, res) => {
             return res.status(400).json({ message: 'Invalid Event' });
         }
 
-        const amountInPaise = Math.round(event.price * 100);
+        // Validate Influencer Code & Get Discount
+        let discountPercent = 0;
+        if (influencer_code) {
+            const { data: infData, error: infError } = await supabase
+                .from('influencers')
+                .select('active, discount_percent')
+                .eq('code', influencer_code)
+                .single();
+
+            if (infData && infData.active) {
+                discountPercent = infData.discount_percent || 0;
+            }
+        }
+
+        // Calculate Amount on Server (Secure)
+        let finalPrice = event.price;
+        if (discountPercent > 0) {
+            const discountAmount = Math.round(event.price * (discountPercent / 100));
+            finalPrice = event.price - discountAmount;
+        }
+
+        const amountInPaise = Math.round(finalPrice * 100);
 
         const options = {
             amount: amountInPaise,
@@ -56,13 +77,14 @@ app.post('/api/create-razorpay-order', async (req, res) => {
             receipt: `rcpt_${Date.now().toString().slice(-10)}`,
             notes: {
                 event_id: event_id,
-                influencer_code: influencer_code || 'organic'
+                influencer_code: influencer_code || 'organic',
+                discount_applied: discountPercent + '%'
             }
         };
 
         const order = await razorpay.orders.create(options);
 
-        // Create Pending Booking
+        // Create Pending Booking with actual final price
         const { data: booking, error: bookingError } = await supabase
             .from('bookings')
             .insert({
@@ -70,7 +92,7 @@ app.post('/api/create-razorpay-order', async (req, res) => {
                 customer_name: customer_info.name,
                 customer_email: customer_info.email,
                 customer_phone: customer_info.phone,
-                amount: event.price,
+                amount: finalPrice, // Store discounted price
                 status: 'pending',
                 razorpay_order_id: order.id,
                 influencer_code: influencer_code || null
