@@ -359,7 +359,7 @@ window.approveInfluencer = async (userId, fullName, btnElement) => {
     } else {
         // --- TRIGGER EMAIL ---
         try {
-            await fetch('http://localhost:3000/api/send-approval-email', {
+            await fetch('/api/send-approval-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ influencer_id: userId })
