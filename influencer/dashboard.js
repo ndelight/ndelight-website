@@ -129,8 +129,8 @@ async function initDashboard() {
             resendOtpBtn.style.display = 'none';
 
             try {
-                // Using 127.0.0.1 for reliability
-                const res = await fetch('http://127.0.0.1:3000/api/auth/send-otp', {
+                // Using relative path for Vercel
+                const res = await fetch('/api/auth/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -192,7 +192,7 @@ async function initDashboard() {
             otpMsg.textContent = 'Verifying...';
 
             try {
-                const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
+                const res = await fetch('/api/auth/verify-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

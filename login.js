@@ -70,7 +70,7 @@ authForm.addEventListener('submit', async (e) => {
             submitBtn.textContent = 'Sending Verification Code...';
 
             // 1. Send OTP
-            const res = await fetch('http://localhost:3000/api/auth/send-otp-pre-signup', {
+            const res = await fetch('/api/auth/send-otp-pre-signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -170,7 +170,7 @@ if (forgotLink) {
         sendResetBtn.disabled = true;
 
         try {
-            const res = await fetch('http://localhost:3000/api/auth/forgot-password', {
+            const res = await fetch('/api/auth/forgot-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -287,7 +287,7 @@ if (verifySignupOtpBtn) {
 
         try {
             // 1. Verify OTP
-            const res = await fetch('http://localhost:3000/api/auth/verify-otp-pre-signup', {
+            const res = await fetch('/api/auth/verify-otp-pre-signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })
@@ -335,7 +335,7 @@ async function processSignup() {
         // B. Mark as Verified (Server-Side)
         if (data.session) {
             // Call server to mark email_verified = true
-            await fetch('http://localhost:3000/api/auth/mark-verified', {
+            await fetch('/api/auth/mark-verified', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
