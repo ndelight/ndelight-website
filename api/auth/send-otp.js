@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
         // 6. Send Email
         const { error: emailError } = await resend.emails.send({
-            from: 'NDelight <contact@contact.ndelight.in>',
+            from: 'NDelight <noreply@contact.ndelight.in>',
             to: [email],
             subject: 'Verify your email - NDelight',
             html: `

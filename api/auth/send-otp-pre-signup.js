@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
         // 4. Send Email
         await resend.emails.send({
-            from: 'NDelight <contact@contact.ndelight.in>',
+            from: 'NDelight <noreply@contact.ndelight.in>',
             to: [email],
             subject: 'Verify your email to Signup - NDelight',
             html: `

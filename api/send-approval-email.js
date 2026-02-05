@@ -36,7 +36,7 @@ export default async function handler(req, res) {
                     <p>Your influencer application for <strong>NDelight</strong> has been approved.</p>
                     <p>Your Request Code: <strong>${influencer.code}</strong></p>
                     <p>You can now log in to your dashboard to track earnings and bookings.</p>
-                    <a href="${process.env.VITE_APP_URL || 'https://ndelight.vercel.app'}/login.html" style="display:inline-block; padding: 10px 20px; background: #ffd700; color: #000; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;">Go to Dashboard</a>
+                    <a href="${process.env.VITE_APP_URL || 'https://www.ndelight.in'}/login.html" style="display:inline-block; padding: 10px 20px; background: #ffd700; color: #000; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;">Go to Dashboard</a>
                 </div>
             `
         });

@@ -80,31 +80,27 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Sending...';
             btn.disabled = true;
 
-            fetch(API_URL, {
+            fetch('/api/contact', {
                 method: 'POST',
-                // SUPER IMPORTANT: Use text/plain to avoid CORS preflight options request which GAS fails on
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: contactForm.querySelector('#name').value,
                     email: contactForm.querySelector('#email').value,
                     message: contactForm.querySelector('#message').value
-                    // No 'action' needed for contact form as per unified_script logic
                 })
             })
-                .then(response => response.text()) // Get text first to safely handle potential HTML errors
-                .then(text => {
-                    try {
-                        const data = JSON.parse(text);
-                        if (data.result === 'success') {
-                            alert('Thank you! Your message has been sent successfully.');
-                            contactForm.reset();
-                        } else {
-                            alert('Something went wrong. Please try again later.');
-                            console.error('Script Error:', data);
-                        }
-                    } catch (e) {
-                        console.error("Submission Error:", e);
-                        alert("There was a technical issue sending your message. Please try again later.");
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errData => { throw new Error(errData.error || 'Server Error'); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.result === 'success') {
+                        alert('Thank you! Your message has been sent successfully.');
+                        contactForm.reset();
+                    } else {
+                        throw new Error(data.error || 'Unknown Error');
                     }
                 })
                 .catch(err => {

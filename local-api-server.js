@@ -605,6 +605,56 @@ app.post('/api/send-approval-email', async (req, res) => {
 });
 
 // ------------------------------------------------------------------
+// API: Contact Form (Public)
+// ------------------------------------------------------------------
+app.post('/api/contact', async (req, res) => {
+    try {
+        const { name, email, message } = req.body;
+
+        if (!name || !email || !message) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // 1. Save to Database (Backup)
+        const { error: dbError } = await supabaseAdmin
+            .from('contact_messages')
+            .insert([{ name, email, message }]);
+
+        if (dbError) {
+            console.error('DB Insert Error:', dbError);
+        }
+
+        // 2. Send Email via Resend
+        console.log(`[Contact] Sending message from ${email}...`);
+        const { data, error: emailError } = await resend.emails.send({
+            from: 'NDelight Contact <contact@contact.ndelight.in>',
+            to: ['ndelight.co@gmail.com'],
+            subject: `New Inquiry from ${name}`,
+            html: `
+                <h2>New Website Inquiry</h2>
+                <p><strong>Name:</strong> ${name}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <div style="background:#f9f9f9; padding:15px; border-left:4px solid #ffd700;">
+                    <p style="white-space: pre-wrap;">${message}</p>
+                </div>
+            `
+        });
+
+        if (emailError) {
+            console.error('[Contact] Resend Error:', emailError);
+            return res.status(500).json({ error: 'Failed to send email' });
+        }
+
+        console.log(`[Contact] Email sent! ID: ${data.id}`);
+        return res.status(200).json({ result: 'success', message: 'Message sent!' });
+
+    } catch (err) {
+        console.error('Contact API Error:', err);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// ------------------------------------------------------------------
 // API: Create Razorpay Order
 // ------------------------------------------------------------------
 app.post('/api/create-razorpay-order', async (req, res) => {

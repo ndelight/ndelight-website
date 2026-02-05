@@ -39,11 +39,11 @@ export default async function handler(req, res) {
         if (updateError) throw updateError;
 
         // 4. Send Email
-        const siteUrl = process.env.VITE_APP_URL || 'https://ndelight.vercel.app'; // Fallback to prod or env
+        const siteUrl = process.env.VITE_APP_URL || 'https://www.ndelight.in'; // Fallback to prod
         const resetLink = `${siteUrl}/reset-password.html?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
         await resend.emails.send({
-            from: 'NDelight <contact@contact.ndelight.in>',
+            from: 'NDelight <noreply@contact.ndelight.in>',
             to: [email],
             subject: 'Reset Your Password - NDelight',
             html: `
