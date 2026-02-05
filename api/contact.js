@@ -1,11 +1,40 @@
-import supabaseAdmin from './_utils/supabaseAdmin.js';
+import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize clients strictly inside safe scope or with checks?
+// Top level initialization is standard for lambdas (warm start cache).
+// But we'll add checks to ensure we don't crash silently.
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const resendKey = process.env.RESEND_API_KEY;
+
+// Create clients safely
+const supabaseAdmin = (supabaseUrl && supabaseServiceKey)
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : null;
+
+const resend = resendKey ? new Resend(resendKey) : null;
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    // DEBUG: Check Environment
+    if (!supabaseAdmin || !resend) {
+        console.error('SERVER CONFIG ERROR: Missing Environment Variables');
+        console.error('VITE_SUPABASE_URL:', !!supabaseUrl);
+        console.error('SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
+        console.error('RESEND_API_KEY:', !!resendKey);
+        return res.status(500).json({
+            error: 'Server Configuration Error (Missing Keys)',
+            debug: {
+                hasSupabaseUrl: !!supabaseUrl,
+                hasServiceKey: !!supabaseServiceKey,
+                hasResendKey: !!resendKey
+            }
+        });
     }
 
     try {
@@ -22,12 +51,11 @@ export default async function handler(req, res) {
 
         if (dbError) {
             console.error('DB Insert Error:', dbError);
-            // We verify DB insert but don't block email if it fails (unlikely)
         }
 
         // 2. Send Email via Resend
         const { data, error: emailError } = await resend.emails.send({
-            from: 'NDelight Contact <onboarding@resend.dev>', // Update this if you have a custom domain
+            from: 'NDelight Contact <onboarding@resend.dev>', // Use verified domain if available
             to: ['ndelight.co@gmail.com'],
             subject: `New Inquiry from ${name}`,
             html: `
@@ -48,7 +76,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ result: 'success', message: 'Message sent!' });
 
     } catch (err) {
-        console.error('Server Error:', err);
+        console.error('Server Internal Error:', err);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
