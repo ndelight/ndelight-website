@@ -206,18 +206,30 @@ window.openEventModal = (id) => {
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset()) // Adjust to local
         document.getElementById('evDate').value = d.toISOString().slice(0, 16)
 
+        document.getElementById('evDescription').value = ev.description || '' // Populate
         document.getElementById('evLocation').value = ev.location || ''
         document.getElementById('evPrice').value = ev.price || 0
-        document.getElementById('evImage').value = ev.image_url || ''
+        document.getElementById('evImageUrl').value = ev.image_url || ''
+        document.getElementById('evImageFile').value = '' // Clear file input
+
+        const info = document.getElementById('evImagePreviewInfo')
+        if (ev.image_url) {
+            info.innerHTML = `Current: <a href="${ev.image_url}" target="_blank" style="color:#ffd700">View Image</a> (Upload new to replace)`
+        } else {
+            info.textContent = 'No image currently set.'
+        }
     } else {
         // Add Mode
         title.textContent = 'Add New Event'
         document.getElementById('eventId').value = ''
         document.getElementById('evTitle').value = ''
         document.getElementById('evDate').value = ''
+        document.getElementById('evDescription').value = '' // Reset
         document.getElementById('evLocation').value = ''
         document.getElementById('evPrice').value = ''
-        document.getElementById('evImage').value = ''
+        document.getElementById('evImageUrl').value = ''
+        document.getElementById('evImageFile').value = ''
+        document.getElementById('evImagePreviewInfo').textContent = ''
     }
 
     modal.classList.add('active')
@@ -231,9 +243,41 @@ window.saveEvent = async () => {
     const id = document.getElementById('eventId').value
     const title = document.getElementById('evTitle').value
     const date = document.getElementById('evDate').value
+    const description = document.getElementById('evDescription').value
     const location = document.getElementById('evLocation').value
     const price = document.getElementById('evPrice').value
-    const image_url = document.getElementById('evImage').value
+
+    // Image logic
+    const fileInput = document.getElementById('evImageFile')
+    const hiddenUrlInput = document.getElementById('evImageUrl')
+    let finalImageUrl = hiddenUrlInput.value // Default to existing URL
+
+    // Upload if file selected
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `events/${fileName}`
+
+        // Show generic loading state
+        document.getElementById('evImagePreviewInfo').textContent = 'Uploading image...'
+
+        const { error: uploadError } = await supabase.storage
+            .from('event-images')
+            .upload(filePath, file)
+
+        if (uploadError) {
+            alert('Image Upload Failed: ' + uploadError.message)
+            document.getElementById('evImagePreviewInfo').textContent = 'Upload failed.'
+            return
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('event-images')
+            .getPublicUrl(filePath)
+
+        finalImageUrl = publicUrl
+    }
 
     if (!title || !date || !price) {
         const err = document.getElementById('modalError')
@@ -245,9 +289,10 @@ window.saveEvent = async () => {
     const payload = {
         title,
         date: new Date(date).toISOString(),
+        description,
         location,
         price,
-        image_url
+        image_url: finalImageUrl
     }
 
     let error

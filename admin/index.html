@@ -122,6 +122,10 @@
             width: 90%;
             max-width: 500px;
             border: 1px solid #333;
+            max-height: 90vh;
+            /* Prevent it from being taller than the screen */
+            overflow-y: auto;
+            /* Enable vertical scrolling */
         }
 
         .form-group {
@@ -211,6 +215,11 @@
             </div>
 
             <div class="form-group">
+                <label>Description (Optional)</label>
+                <textarea id="evDescription" rows="3" placeholder="Enter event details..."></textarea>
+            </div>
+
+            <div class="form-group">
                 <label>Location</label>
                 <input type="text" id="evLocation" placeholder="e.g. City Hall">
             </div>
@@ -221,8 +230,12 @@
             </div>
 
             <div class="form-group">
-                <label>Image URL</label>
-                <input type="url" id="evImage" placeholder="https://...">
+                <label>Event Image</label>
+                <!-- Hidden input to store the URL after upload -->
+                <input type="hidden" id="evImageUrl">
+                <!-- File input for selecting the image -->
+                <input type="file" id="evImageFile" accept="image/*" style="padding: 5px;">
+                <p id="evImagePreviewInfo" style="color: #bbb; font-size: 0.8rem; margin-top: 5px;"></p>
             </div>
 
             <div class="modal-actions">
