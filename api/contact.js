@@ -49,7 +49,7 @@ export default async function handler(req, res) {
 
         // 7. Send Email
         const { data, error: emailError } = await resend.emails.send({
-            from: 'NDelight Contact <onboarding@resend.dev>',
+            from: 'NDelight Contact <contact@contact.ndelight.in>',
             to: ['ndelight.co@gmail.com'],
             subject: `New Inquiry from ${name}`,
             html: `
