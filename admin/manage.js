@@ -157,6 +157,7 @@ window.rejectInfluencer = async (userId, btnElement) => {
 
 // Data Loaders
 async function loadEvents(container) {
+    // 1. Fetch Events
     const { data: events, error } = await supabase.from('events').select('*').order('date', { ascending: true })
 
     if (error) {
@@ -164,13 +165,29 @@ async function loadEvents(container) {
         return
     }
 
+    // 2. Fetch Featured Events to check status
+    const { data: featuredData, error: featError } = await supabase.from('featured_events').select('event_id')
+    if (featError) console.error('Error fetching featured:', featError)
+
+    // Create a Set for O(1) lookup
+    const featuredSet = new Set((featuredData || []).map(f => f.event_id))
+
     currentEvents = events || []
 
     let html = '<h3>All Events</h3><button class="btn-action" style="margin-bottom:1rem;" onclick="window.openEventModal(null)">+ Add New Event</button>'
     if (currentEvents.length > 0) {
-        html += '<table><thead><tr><th>Title</th><th>Date</th><th>Price</th><th>Actions</th></tr></thead><tbody>'
+        html += '<table><thead><tr><th>Featured</th><th>Title</th><th>Date</th><th>Price</th><th>Actions</th></tr></thead><tbody>'
         currentEvents.forEach(ev => {
+            const isFeatured = featuredSet.has(ev.id)
+            const starIcon = isFeatured ? '⭐' : '☆' // Filled vs Empty Star
+            const starClass = isFeatured ? 'featured-star active' : 'featured-star'
+
             html += `<tr>
+            <td style="text-align:center; font-size:1.5rem; cursor:pointer; user-select:none;" 
+                onclick="event.stopPropagation(); window.toggleFeatured('${ev.id}', this)" 
+                title="${isFeatured ? 'Remove from Featured' : 'Add to Featured'}">
+                ${starIcon}
+            </td>
             <td>${ev.title}</td>
             <td>${new Date(ev.date).toLocaleDateString()}</td>
             <td>₹${ev.price}</td>
@@ -335,29 +352,56 @@ window.deleteEvent = async (id) => {
 
 
 
-window.deleteInfluencer = async (id) => {
-    if (!confirm('Are you sure you want to delete this influencer? This will revoke their access.')) return
+// TOGGLE FEATURED LOGIC
+window.toggleFeatured = async (eventId, starElement) => {
+    console.log('toggleFeatured clicked:', eventId) // DEBUG
+    // Visual Feedback immediately
+    const isCurrentlyFeatured = starElement.textContent.trim() === '⭐'
+    starElement.textContent = '...' // Loading state
+    starElement.style.opacity = '0.5'
 
-    // 1. Delete from influencers table
-    const { error: infError } = await supabase.from('influencers').delete().eq('id', id)
+    try {
+        if (isCurrentlyFeatured) {
+            // REMOVE
+            const { error } = await supabase
+                .from('featured_events')
+                .delete()
+                .eq('event_id', eventId)
 
-    if (infError) {
-        // If FK violation (e.g., has bookings), just de-activate
-        if (infError.code === '23503') { // ForeignKey Violation
-            if (confirm('This influencer has existing bookings and cannot be fully deleted to preserve history. Do you want to Deactivate them instead?')) {
-                await supabase.from('influencers').update({ active: false }).eq('id', id);
-                alert('Influencer Deactivated.');
-                await loadInfluencers(document.getElementById('dynamicContent'));
-                return;
+            if (error) throw error
+
+        } else {
+            // ADD
+            // 1. Get max order
+            const { data: maxOrderData, error: maxError } = await supabase
+                .from('featured_events')
+                .select('display_order')
+                .order('display_order', { ascending: false })
+                .limit(1)
+
+            if (maxError && maxError.code !== 'PGRST116') { // Ignore empty result error
+                console.error('Max Order Error', maxError)
             }
-        }
-        alert('Delete Failed: ' + infError.message)
-        return;
-    }
 
-    // 2. Set profile role back to user (optional)
-    await supabase.from('profiles').update({ role: 'user' }).eq('id', id)
-    await loadInfluencers(document.getElementById('dynamicContent'))
+            const nextOrder = (maxOrderData && maxOrderData.length > 0) ? (maxOrderData[0].display_order + 1) : 1
+
+            // 2. Insert
+            const { error: insertError } = await supabase
+                .from('featured_events')
+                .insert([{ event_id: eventId, display_order: nextOrder }])
+
+            if (insertError) throw insertError
+        }
+
+        // Success - Reload to ensure state execution
+        await loadEvents(document.getElementById('dynamicContent'))
+
+    } catch (err) {
+        alert('Action Failed: ' + err.message)
+        // Revert visual on error (though loadEvents will overwrite)
+        starElement.textContent = isCurrentlyFeatured ? '⭐' : '☆'
+        starElement.style.opacity = '1'
+    }
 }
 
 // -------------------------------------------------------------
