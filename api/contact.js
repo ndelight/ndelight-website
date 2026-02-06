@@ -9,26 +9,25 @@ export default async function handler(req, res) {
         const { createClient } = await import('@supabase/supabase-js');
         const { Resend } = await import('resend');
 
-        // 2. Load Env Vars
-        const supabaseUrl = process.env.VITE_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+        // 2. Load Env Vars (Server-Side Only)
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         const resendKey = process.env.RESEND_API_KEY;
 
-        // 3. Diagnose Missing Keys
+        // 3. Diagnose Missing Keys (Generic Error for Security)
         if (!supabaseUrl || !supabaseServiceKey || !resendKey) {
-            console.error('SERVER OLD CONFIG ERROR: Missing Keys');
-            return res.status(500).json({
-                error: 'Server Misconfigured (Missing Keys)',
-                details: {
-                    sb_url: !!supabaseUrl,
-                    sb_key: !!supabaseServiceKey,
-                    resend: !!resendKey
-                }
-            });
+            console.error('SERVER CONFIG ERROR: Missing Environment Variables');
+            console.error('Checking: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY');
+            return res.status(500).json({ error: 'Server Misconfigured' });
         }
 
         // 4. Init Clients
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        });
         const resend = new Resend(resendKey);
 
         // 5. Parse Body
