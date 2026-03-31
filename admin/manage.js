@@ -53,6 +53,8 @@ window.showSection = async (section) => {
 
     if (section === 'events') {
         await loadEvents(contentDiv)
+    } else if (section === 'water') {
+        await loadWater(contentDiv)
     } else if (section === 'influencers') {
         await loadInfluencers(contentDiv)
     } else if (section === 'bookings') {
@@ -524,4 +526,475 @@ async function loadBookings(container) {
         html += '<p>No bookings found.</p>'
     }
     container.innerHTML = html
+}
+
+// ----------------- WATER MANAGEMENT -----------------
+
+async function loadWater(container) {
+    // 1. Orders
+    const { data: orders, error: ordersError } = await supabase
+        .from('water_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+    // 2. Showcase config
+    const { data: showcase, error: showcaseError } = await supabase
+        .from('water_showcase')
+        .select('*')
+        .order('display_order', { ascending: true })
+
+    // 3. Products (pricing)
+    const { data: products, error: productsError } = await supabase
+        .from('water_products')
+        .select('id, size_ml, title, unit_price, image_url, display_order, is_active')
+        .order('display_order', { ascending: true })
+
+    let html = '<h3>Water Orders</h3>'
+
+    if (ordersError) {
+        html += `<p style="color:red">Error loading orders: ${ordersError.message}</p>`
+    } else if (orders && orders.length > 0) {
+        html += '<table><thead><tr><th>Created</th><th>Name</th><th>Phone</th><th>Quantity</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead><tbody>'
+        orders.forEach(ord => {
+            html += `<tr>
+                <td>${new Date(ord.created_at).toLocaleString()}</td>
+                <td>${ord.customer_name}</td>
+                <td>${ord.phone}</td>
+                <td>${ord.quantity_text}</td>
+                <td>${ord.status}</td>
+                <td>${ord.payment_status}</td>
+                <td>
+                    <button class="btn-action" style="font-size:0.7rem; margin-right:5px;" onclick="window.openWaterOrderModal('${ord.id}')">Edit</button>
+                    <button class="btn-delete" style="font-size:0.7rem;" onclick="window.deleteWaterOrder('${ord.id}')">Delete</button>
+                </td>
+            </tr>`
+        })
+        html += '</tbody></table>'
+    } else {
+        html += '<p>No water orders yet.</p>'
+    }
+
+    html += '<h3 style="margin-top:2.5rem;">Water Page Cards</h3>'
+
+    if (showcaseError) {
+        html += `<p style="color:red">Error loading water cards: ${showcaseError.message}</p>`
+    } else {
+        html += '<button class="btn-action" style="margin-bottom:1rem;" onclick="window.openWaterShowcaseModal(null)">+ Add Card</button>'
+
+        if (showcase && showcase.length > 0) {
+            html += '<table><thead><tr><th>Order</th><th>Title</th><th>Tag</th><th>Active</th><th>Actions</th></tr></thead><tbody>'
+            showcase.forEach(card => {
+                html += `<tr>
+                    <td>${card.display_order}</td>
+                    <td>${card.title}</td>
+                    <td>${card.tag || ''}</td>
+                    <td>${card.is_active ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button class="btn-action" style="font-size:0.7rem; margin-right:5px;" onclick="window.openWaterShowcaseModal('${card.id}')">Edit</button>
+                        <button class="btn-delete" style="font-size:0.7rem;" onclick="window.deleteWaterShowcase('${card.id}')">Delete</button>
+                    </td>
+                </tr>`
+            })
+            html += '</tbody></table>'
+        } else {
+            html += '<p>No cards configured yet. The front-end will fall back to default sample cards.</p>'
+        }
+    }
+
+    html += '<h3 style="margin-top:2.5rem;">Water Products (Pricing)</h3>'
+
+    if (productsError) {
+        html += `<p style="color:red">Error loading water products: ${productsError.message}</p>`
+    } else {
+        html += '<button class="btn-action" style="margin-bottom:1rem;" onclick="window.openWaterProductModal(null)">+ Add Product</button>'
+
+        if (products && products.length > 0) {
+            html += '<table><thead><tr><th>Size</th><th>Title</th><th>Price</th><th>Active</th><th>Actions</th></tr></thead><tbody>'
+            products.forEach(p => {
+                html += `<tr>
+                    <td>${p.size_ml}</td>
+                    <td>${p.title}</td>
+                    <td>₹${p.unit_price}</td>
+                    <td>${p.is_active ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button class="btn-action" style="font-size:0.7rem; margin-right:5px;" onclick="window.openWaterProductModal('${p.id}')">Edit</button>
+                        <button class="btn-delete" style="font-size:0.7rem;" onclick="window.deleteWaterProduct('${p.id}')">Delete</button>
+                    </td>
+                </tr>`
+            })
+            html += '</tbody></table>'
+        } else {
+            html += '<p>No products configured. The storefront may not show items.</p>'
+        }
+    }
+
+    container.innerHTML = html
+}
+
+// Water Order Modal helpers
+window.openWaterOrderModal = async (id) => {
+    const modal = document.getElementById('waterOrderModal')
+    const err = document.getElementById('waterModalError')
+    err.style.display = 'none'
+    err.textContent = ''
+
+    if (!id) return
+
+    const { data, error } = await supabase
+        .from('water_orders')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+    if (error || !data) {
+        alert('Unable to load order.')
+        return
+    }
+
+    document.getElementById('waterOrderId').value = data.id
+    document.getElementById('waterCustomerName').value = data.customer_name || ''
+    document.getElementById('waterCustomerPhone').value = data.phone || ''
+    document.getElementById('waterCustomerEmail').value = data.email || ''
+    document.getElementById('waterQuantityText').value = data.quantity_text || ''
+    document.getElementById('waterFullAddress').value = data.full_address || ''
+    document.getElementById('waterStatus').value = data.status || ''
+    document.getElementById('waterPaymentStatus').value = data.payment_status || ''
+    document.getElementById('waterNotes').value = data.notes || ''
+
+    modal.classList.add('active')
+}
+
+window.closeWaterOrderModal = () => {
+    document.getElementById('waterOrderModal').classList.remove('active')
+}
+
+window.saveWaterOrder = async () => {
+    const id = document.getElementById('waterOrderId').value
+    const err = document.getElementById('waterModalError')
+
+    const payload = {
+        customer_name: document.getElementById('waterCustomerName').value,
+        phone: document.getElementById('waterCustomerPhone').value,
+        email: document.getElementById('waterCustomerEmail').value || null,
+        quantity_text: document.getElementById('waterQuantityText').value,
+        full_address: document.getElementById('waterFullAddress').value,
+        status: document.getElementById('waterStatus').value || 'new',
+        payment_status: document.getElementById('waterPaymentStatus').value || 'pending',
+        notes: document.getElementById('waterNotes').value || null
+    }
+
+    const { error } = await supabase
+        .from('water_orders')
+        .update(payload)
+        .eq('id', id)
+
+    if (error) {
+        err.textContent = 'Save failed: ' + error.message
+        err.style.display = 'block'
+        return
+    }
+
+    window.closeWaterOrderModal()
+    await loadWater(document.getElementById('dynamicContent'))
+}
+
+window.deleteWaterOrder = async (id) => {
+    if (!confirm('Delete this water order?')) return
+    const { error } = await supabase.from('water_orders').delete().eq('id', id)
+    if (error) {
+        alert('Delete failed: ' + error.message)
+    } else {
+        await loadWater(document.getElementById('dynamicContent'))
+    }
+}
+
+// Water Showcase Modal helpers
+window.openWaterShowcaseModal = async (id) => {
+    const modal = document.getElementById('waterShowcaseModal')
+    const err = document.getElementById('waterShowcaseError')
+    const imageFileInput = document.getElementById('waterShowcaseImageFile')
+    const imageInfo = document.getElementById('waterShowcaseImageInfo')
+    err.style.display = 'none'
+    err.textContent = ''
+    imageFileInput.value = ''
+
+    if (id) {
+        const { data, error } = await supabase
+            .from('water_showcase')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error || !data) {
+            alert('Unable to load card.')
+            return
+        }
+
+        document.getElementById('waterShowcaseId').value = data.id
+        document.getElementById('waterShowcaseCardTitle').value = data.title || ''
+        document.getElementById('waterShowcaseSubtitle').value = data.subtitle || ''
+        document.getElementById('waterShowcaseTag').value = data.tag || ''
+        document.getElementById('waterShowcaseImageUrl').value = data.image_url || ''
+        document.getElementById('waterShowcaseOrder').value = data.display_order || 1
+        document.getElementById('waterShowcaseActive').checked = !!data.is_active
+        imageInfo.innerHTML = data.image_url
+            ? `Current: <a href="${data.image_url}" target="_blank" style="color:#ffd700">View Image</a> (Upload new to replace)`
+            : 'No image currently set.'
+
+        document.getElementById('waterShowcaseTitle').textContent = 'Edit Card'
+    } else {
+        document.getElementById('waterShowcaseId').value = ''
+        document.getElementById('waterShowcaseCardTitle').value = ''
+        document.getElementById('waterShowcaseSubtitle').value = ''
+        document.getElementById('waterShowcaseTag').value = ''
+        document.getElementById('waterShowcaseImageUrl').value = ''
+        document.getElementById('waterShowcaseOrder').value = 1
+        document.getElementById('waterShowcaseActive').checked = true
+        imageInfo.textContent = ''
+        document.getElementById('waterShowcaseTitle').textContent = 'Add Card'
+    }
+
+    modal.classList.add('active')
+}
+
+window.closeWaterShowcaseModal = () => {
+    document.getElementById('waterShowcaseModal').classList.remove('active')
+}
+
+window.saveWaterShowcase = async () => {
+    const id = document.getElementById('waterShowcaseId').value
+    const err = document.getElementById('waterShowcaseError')
+    const imageFileInput = document.getElementById('waterShowcaseImageFile')
+    const imageInfo = document.getElementById('waterShowcaseImageInfo')
+
+    let finalImageUrl = document.getElementById('waterShowcaseImageUrl').value || null
+
+    if (imageFileInput.files.length > 0) {
+        const file = imageFileInput.files[0]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `showcase/${fileName}`
+
+        imageInfo.textContent = 'Uploading image...'
+
+        const { error: uploadError } = await supabase.storage
+            .from('water-designs')
+            .upload(filePath, file)
+
+        if (uploadError) {
+            err.textContent = 'Image upload failed: ' + uploadError.message
+            err.style.display = 'block'
+            imageInfo.textContent = 'Upload failed.'
+            return
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('water-designs')
+            .getPublicUrl(filePath)
+
+        finalImageUrl = publicUrl
+        document.getElementById('waterShowcaseImageUrl').value = finalImageUrl
+        imageInfo.innerHTML = `Uploaded: <a href="${finalImageUrl}" target="_blank" style="color:#ffd700">View Image</a>`
+    }
+
+    const payload = {
+        title: document.getElementById('waterShowcaseCardTitle').value,
+        subtitle: document.getElementById('waterShowcaseSubtitle').value || null,
+        tag: document.getElementById('waterShowcaseTag').value || null,
+        image_url: finalImageUrl,
+        display_order: parseInt(document.getElementById('waterShowcaseOrder').value || '1', 10),
+        is_active: document.getElementById('waterShowcaseActive').checked
+    }
+
+    if (!payload.title) {
+        err.textContent = 'Title is required.'
+        err.style.display = 'block'
+        return
+    }
+
+    let dbError
+    if (id) {
+        const { error } = await supabase
+            .from('water_showcase')
+            .update(payload)
+            .eq('id', id)
+        dbError = error
+    } else {
+        const { error } = await supabase
+            .from('water_showcase')
+            .insert([payload])
+        dbError = error
+    }
+
+    if (dbError) {
+        err.textContent = 'Save failed: ' + dbError.message
+        err.style.display = 'block'
+        return
+    }
+
+    window.closeWaterShowcaseModal()
+    await loadWater(document.getElementById('dynamicContent'))
+}
+
+window.deleteWaterShowcase = async (id) => {
+    if (!confirm('Delete this water card?')) return
+    const { error } = await supabase.from('water_showcase').delete().eq('id', id)
+    if (error) {
+        alert('Delete failed: ' + error.message)
+    } else {
+        await loadWater(document.getElementById('dynamicContent'))
+    }
+}
+
+// Water Products Modal helpers
+window.openWaterProductModal = async (id) => {
+    const modal = document.getElementById('waterProductModal')
+    const err = document.getElementById('waterProductModalError')
+    const imageFileInput = document.getElementById('waterProductImageFile')
+    const imageInfo = document.getElementById('waterProductImageInfo')
+
+    err.style.display = 'none'
+    err.textContent = ''
+
+    if (imageFileInput) imageFileInput.value = ''
+
+    if (id) {
+        const { data, error } = await supabase
+            .from('water_products')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error || !data) {
+            alert('Unable to load product.')
+            return
+        }
+
+        document.getElementById('waterProductId').value = data.id
+        document.getElementById('waterProductSizeMl').value = data.size_ml || ''
+        document.getElementById('waterProductTitle').value = data.title || ''
+        document.getElementById('waterProductUnitPrice').value = data.unit_price || ''
+        document.getElementById('waterProductDisplayOrder').value = data.display_order || 1
+        document.getElementById('waterProductIsActive').checked = !!data.is_active
+
+        document.getElementById('waterProductImageUrlInput').value = data.image_url || ''
+        document.getElementById('waterProductImageUrl').value = data.image_url || ''
+
+        imageInfo.innerHTML = data.image_url
+            ? `Current: <a href="${data.image_url}" target="_blank" style="color:#ffd700">View Image</a> (Upload new to replace)`
+            : 'No image currently set.'
+
+        document.getElementById('waterProductModalTitle').textContent = 'Edit Water Product'
+    } else {
+        document.getElementById('waterProductId').value = ''
+        document.getElementById('waterProductSizeMl').value = ''
+        document.getElementById('waterProductTitle').value = ''
+        document.getElementById('waterProductUnitPrice').value = ''
+        document.getElementById('waterProductDisplayOrder').value = 1
+        document.getElementById('waterProductIsActive').checked = true
+
+        document.getElementById('waterProductImageUrlInput').value = ''
+        document.getElementById('waterProductImageUrl').value = ''
+        imageInfo.textContent = ''
+        document.getElementById('waterProductModalTitle').textContent = 'Add Water Product'
+    }
+
+    modal.classList.add('active')
+}
+
+window.closeWaterProductModal = () => {
+    document.getElementById('waterProductModal').classList.remove('active')
+}
+
+window.saveWaterProduct = async () => {
+    const id = document.getElementById('waterProductId').value
+    const err = document.getElementById('waterProductModalError')
+    const imageFileInput = document.getElementById('waterProductImageFile')
+    const imageInfo = document.getElementById('waterProductImageInfo')
+
+    const size_ml = parseInt(document.getElementById('waterProductSizeMl').value || '', 10)
+    const title = document.getElementById('waterProductTitle').value
+    const unit_price = parseFloat(document.getElementById('waterProductUnitPrice').value || '0')
+    const display_order = parseInt(document.getElementById('waterProductDisplayOrder').value || '1', 10)
+    const is_active = document.getElementById('waterProductIsActive').checked
+
+    let finalImageUrl = document.getElementById('waterProductImageUrlInput').value || null
+
+    if (!size_ml || !title || Number.isNaN(unit_price)) {
+        err.textContent = 'Size, Title, and Unit Price are required.'
+        err.style.display = 'block'
+        return
+    }
+
+    if (imageFileInput.files.length > 0) {
+        const file = imageFileInput.files[0]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `products/${fileName}`
+
+        imageInfo.textContent = 'Uploading image...'
+
+        const { error: uploadError } = await supabase.storage
+            .from('water-designs')
+            .upload(filePath, file)
+
+        if (uploadError) {
+            err.textContent = 'Image upload failed: ' + uploadError.message
+            err.style.display = 'block'
+            imageInfo.textContent = 'Upload failed.'
+            return
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('water-designs')
+            .getPublicUrl(filePath)
+
+        finalImageUrl = publicUrl
+        document.getElementById('waterProductImageUrlInput').value = finalImageUrl
+        document.getElementById('waterProductImageUrl').value = finalImageUrl
+        imageInfo.innerHTML = `Uploaded: <a href="${finalImageUrl}" target="_blank" style="color:#ffd700">View Image</a>`
+    }
+
+    const payload = {
+        size_ml,
+        title,
+        unit_price,
+        image_url: finalImageUrl,
+        display_order,
+        is_active
+    }
+
+    let dbError
+    if (id) {
+        const { error } = await supabase
+            .from('water_products')
+            .update(payload)
+            .eq('id', id)
+        dbError = error
+    } else {
+        const { error } = await supabase
+            .from('water_products')
+            .insert([payload])
+        dbError = error
+    }
+
+    if (dbError) {
+        err.textContent = 'Save failed: ' + dbError.message
+        err.style.display = 'block'
+        return
+    }
+
+    window.closeWaterProductModal()
+    await loadWater(document.getElementById('dynamicContent'))
+}
+
+window.deleteWaterProduct = async (id) => {
+    if (!confirm('Delete this water product?')) return
+    const { error } = await supabase.from('water_products').delete().eq('id', id)
+    if (error) {
+        alert('Delete failed: ' + error.message)
+    } else {
+        await loadWater(document.getElementById('dynamicContent'))
+    }
 }

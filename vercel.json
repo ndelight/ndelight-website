@@ -7,6 +7,22 @@
         {
             "source": "/book/:match*",
             "destination": "/book.html"
+        },
+        {
+            "source": "/water",
+            "destination": "/water.html"
+        },
+        {
+            "source": "/water/:match*",
+            "destination": "/water.html"
+        },
+        {
+            "source": "/water-order",
+            "destination": "/water-order.html"
+        },
+        {
+            "source": "/water-order/:match*",
+            "destination": "/water-order.html"
         }
     ],
     "functions": {

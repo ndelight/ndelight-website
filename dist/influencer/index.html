@@ -48,6 +48,10 @@
             font-weight: bold;
             color: #ffd700;
             margin: 0.5rem 0;
+            overflow-wrap: anywhere;
+            /* Handles long codes */
+            word-break: break-word;
+            line-height: 1.2;
         }
 
         .stat-label {
@@ -76,9 +80,9 @@
             color: #ffd700;
         }
     </style>
-  <script type="module" crossorigin src="/assets/influencer-DVGKz4ZO.js"></script>
+  <script type="module" crossorigin src="/assets/influencer-HQu-0VKh.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/supabase-DgD8GzGi.js">
-  <link rel="stylesheet" crossorigin href="/assets/style-BPtz6qii.css">
+  <link rel="stylesheet" crossorigin href="/assets/style-DA0TsRJP.css">
 </head>
 
 <body>
@@ -93,14 +97,16 @@
         <!-- Profile Section -->
         <div
             style="background: #1e1e1e; padding: 2rem; border-radius: 12px; border: 1px solid #333; margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 20px;">
                 <h3 style="color: #ffd700; margin: 0;">Your Public Profile</h3>
                 <div style="display:flex; gap:10px;">
                     <a href="/index.html#influencers" target="_blank" class="btn btn-outline"
-                        style="padding: 10px 20px; font-size: 0.9rem; border:1px solid #444; color:#aaa; text-decoration:none; border-radius:6px; background:#1a1a1a;">View
-                        Public 🔗</a>
+                        style="padding: 10px 15px; font-size: 0.9rem; border:1px solid #444; color:#aaa; text-decoration:none; border-radius:6px; background:#1a1a1a; flex: 1; text-align: center; white-space: nowrap;">View
+                        Profile 🔗</a>
                     <button id="saveProfileBtn" class="btn btn-primary"
-                        style="padding: 10px 20px; font-size: 0.9rem;">Save Changes</button>
+                        style="padding: 10px 15px; font-size: 0.9rem; flex: 1; white-space: nowrap;">Save
+                        Changes</button>
                 </div>
             </div>
 
@@ -114,9 +120,15 @@
                 </div>
 
                 <div>
-                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Contact Email (Public)</label>
-                    <input type="email" id="publicEmail" placeholder="contact@example.com"
-                        style="width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                    <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Contact Email (Protected)</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="email" id="publicEmail" placeholder="Cannot be changed" readonly
+                            style="flex: 1; padding: 12px; background: #1f1f1f; border: 1px solid #333; color: #666; border-radius: 6px; cursor: not-allowed;">
+                        <span id="verifiedBadge" style="display:none; color:#51cf66; font-size:0.9rem;">✅
+                            Verified</span>
+                        <button type="button" id="verifyEmailBtn" class="btn btn-outline"
+                            style="display:none; padding: 10px 15px; font-size: 0.85rem; border:1px solid #ffd700; color:#ffd700; background:transparent; border-radius:6px; cursor:pointer;">Verify</button>
+                    </div>
                 </div>
 
                 <div>
@@ -127,12 +139,12 @@
 
                 <div>
                     <label style="display:block; color:#aaa; margin-bottom: 0.5rem;">Profile Image</label>
-                    <div style="display:flex; gap:10px; align-items:center;">
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
                         <input type="text" id="imageUrl" placeholder="Image URL will appear here" readonly
-                            style="flex:1; padding: 12px; background: #252525; border: 1px solid #444; color: #888; border-radius: 6px;">
+                            style="flex:1; min-width: 0; padding: 12px; background: #252525; border: 1px solid #444; color: #888; border-radius: 6px;">
 
                         <label for="imageUpload" class="btn btn-action"
-                            style="cursor:pointer; white-space:nowrap; display:inline-block; padding:10px 15px; background:#ffd700; color:#000; border-radius:6px; font-weight:bold;">
+                            style="cursor:pointer; white-space:nowrap; display:inline-block; padding:10px 15px; background:#ffd700; color:#000; border-radius:6px; font-weight:bold; flex-shrink: 0;">
                             Upload Photo 📸
                             <input type="file" id="imageUpload" accept="image/*" style="display:none;">
                         </label>
@@ -173,6 +185,32 @@
 
         <h3 style="margin-top: 3rem; color: #ffd700;">Your Bookings</h3>
         <div id="bookingsTable">Loading bookings...</div>
+    </div>
+
+    <!-- OTP Modal -->
+    <div id="otpModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div
+            style="background:#1e1e1e; padding:2rem; border-radius:12px; border:1px solid #333; width:100%; max-width:400px; text-align:center; position:relative;">
+            <h3 style="color:#ffd700; margin-bottom:1rem;">Verify Email</h3>
+            <p style="color:#ccc; margin-bottom:1.5rem;">Enter the 6-digit code sent to your email.</p>
+
+            <input type="text" id="otpInput" placeholder="123456" maxlength="6"
+                style="width:100%; padding:12px; background:#2a2a2a; border:1px solid #444; color:#fff; border-radius:6px; font-size:1.2rem; text-align:center; letter-spacing:5px; margin-bottom:1rem;">
+
+            <button id="submitOtpBtn" class="btn btn-primary"
+                style="width:100%; padding:12px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-bottom:1rem;">Verify
+                Code</button>
+
+            <button id="resendOtpBtn"
+                style="background:none; border:none; color:#aaa; font-size:0.9rem; cursor:pointer; text-decoration:underline;">Resend
+                Code</button>
+            <p id="otpTimer" style="color:#666; font-size:0.8rem; margin-top:5px;"></p>
+            <div id="otpMsg" style="margin-top:1rem; min-height:1.2em;"></div>
+
+            <button id="closeOtpBtn"
+                style="position:absolute; top:15px; right:15px; background:none; border:none; color:#aaa; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
     </div>
 
 </body>

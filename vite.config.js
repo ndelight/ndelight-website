@@ -23,6 +23,12 @@ export default defineConfig({
                     if (req.url.startsWith('/book/')) {
                         req.url = '/book.html';
                     }
+                    if (req.url === '/water' || req.url === '/water/') {
+                        req.url = '/water.html';
+                    }
+                    if (req.url === '/water-order' || req.url === '/water-order/') {
+                        req.url = '/water-order.html';
+                    }
                     next();
                 });
             },
@@ -34,6 +40,8 @@ export default defineConfig({
                 main: 'index.html',
                 event: 'event.html',
                 book: 'book.html',
+                water: 'water.html',
+                water_order: 'water-order.html',
                 success: 'success.html',
                 login: 'login.html',
                 admin: 'admin/index.html',

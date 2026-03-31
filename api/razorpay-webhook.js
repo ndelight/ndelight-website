@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
         console.log(`Processing order.paid for ${order_id}`)
 
-        // 1. Update Booking Status (Use Admin to bypass RLS)
+        // 1. Update Event Booking Status (Use Admin to bypass RLS)
         const { data: booking, error } = await supabaseAdmin
             .from('bookings')
             .update({ status: 'paid' })
@@ -46,8 +46,17 @@ export default async function handler(req, res) {
             .single()
 
         if (error) {
-            console.error('Supabase Update Error:', error)
-            return res.status(500).json({ message: 'Database update failed' })
+            console.error('Booking update warning:', error)
+        }
+
+        // 1b. Update Water Order Payment Status
+        const { error: waterError } = await supabaseAdmin
+            .from('water_orders')
+            .update({ payment_status: 'paid' })
+            .eq('razorpay_order_id', order_id)
+
+        if (waterError) {
+            console.error('Water order update warning:', waterError)
         }
 
         // 2. Send Email via Resend

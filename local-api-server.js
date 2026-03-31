@@ -26,14 +26,14 @@ const razorpay = new Razorpay({
 
 // Standard Client (Anon)
 const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
     process.env.VITE_SUPABASE_ANON_KEY
 );
 
 // Service Role Client (SECURE - BACKEND ONLY)
 const supabaseAdmin = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'place_holder_key'
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'place_holder_key'
 );
 
 // Resend Client
@@ -657,6 +657,216 @@ app.post('/api/contact', async (req, res) => {
 // ------------------------------------------------------------------
 // API: Create Razorpay Order
 // ------------------------------------------------------------------
+app.get('/api/get-water-products', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('water_products')
+            .select('size_ml, title, unit_price, image_url, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+        if (error) return res.status(500).json({ message: 'Failed to load products' });
+        return res.status(200).json({ products: data || [] });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+});
+
+app.get('/api/water/get-products', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('water_products')
+            .select('size_ml, title, unit_price, image_url, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+
+        if (error) return res.status(500).json({ message: 'Failed to load products' });
+        return res.status(200).json({ products: data || [] });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+});
+
+app.post('/api/create-water-razorpay-order', async (req, res) => {
+    try {
+        const { customer_info, items, design_url } = req.body;
+        if (!customer_info || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        const { data: products, error: productError } = await supabaseAdmin
+            .from('water_products')
+            .select('size_ml, unit_price')
+            .eq('is_active', true);
+
+        if (productError) {
+            return res.status(500).json({ message: 'Failed to fetch product pricing' });
+        }
+
+        const priceMap = {};
+        (products || []).forEach((p) => {
+            priceMap[parseInt(p.size_ml, 10)] = Number(p.unit_price);
+        });
+        const normalized = [];
+        let total = 0;
+
+        items.forEach((item) => {
+            const size = parseInt(item.size_ml, 10);
+            const qty = parseInt(item.qty, 10);
+            if (!priceMap[size] || Number.isNaN(qty) || qty <= 0) return;
+            const unit = priceMap[size];
+            total += unit * qty;
+            normalized.push({ size_ml: size, qty, unit_price: unit, line_total: unit * qty });
+        });
+
+        if (normalized.length === 0 || total <= 0) {
+            return res.status(400).json({ message: 'Invalid cart items' });
+        }
+
+        const order = await razorpay.orders.create({
+            amount: Math.round(total * 100),
+            currency: 'INR',
+            receipt: `wtr_${Date.now().toString().slice(-10)}`,
+            notes: { kind: 'water_order' }
+        });
+
+        const quantityText = normalized.map((i) => `${i.size_ml}ml x ${i.qty}`).join(', ');
+        const notes = JSON.stringify({
+            cart_items: normalized,
+            total_amount: total,
+            razorpay_order_id: order.id
+        });
+
+        const { data: waterOrder, error } = await supabaseAdmin
+            .from('water_orders')
+            .insert([{
+                customer_name: customer_info.name,
+                phone: customer_info.phone,
+                email: customer_info.email || null,
+                quantity_text: quantityText,
+                full_address: customer_info.address || '',
+                design_url: design_url || null,
+                status: 'new',
+                payment_status: 'pending',
+                razorpay_order_id: order.id,
+                notes
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Water order insert failed:', error);
+            return res.status(500).json({ message: 'Failed to create water order row' });
+        }
+
+        res.status(200).json({
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            key_id: process.env.RAZORPAY_KEY_ID,
+            water_order_id: waterOrder.id,
+            prefill: {
+                name: customer_info.name,
+                email: customer_info.email || '',
+                contact: customer_info.phone
+            }
+        });
+    } catch (err) {
+        console.error('Create water order API Error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+app.post('/api/water/create-order', async (req, res) => {
+    try {
+        const { customer_info, items, design_url } = req.body;
+        if (!customer_info || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        const { data: products, error: productError } = await supabaseAdmin
+            .from('water_products')
+            .select('size_ml, unit_price')
+            .eq('is_active', true);
+
+        if (productError) {
+            return res.status(500).json({ message: 'Failed to fetch product pricing' });
+        }
+
+        const priceMap = {};
+        (products || []).forEach((p) => {
+            priceMap[parseInt(p.size_ml, 10)] = Number(p.unit_price);
+        });
+        const normalized = [];
+        let total = 0;
+
+        items.forEach((item) => {
+            const size = parseInt(item.size_ml, 10);
+            const qty = parseInt(item.qty, 10);
+            if (!priceMap[size] || Number.isNaN(qty) || qty <= 0) return;
+            const unit = priceMap[size];
+            total += unit * qty;
+            normalized.push({ size_ml: size, qty, unit_price: unit, line_total: unit * qty });
+        });
+
+        if (normalized.length === 0 || total <= 0) {
+            return res.status(400).json({ message: 'Invalid cart items' });
+        }
+
+        const order = await razorpay.orders.create({
+            amount: Math.round(total * 100),
+            currency: 'INR',
+            receipt: `wtr_${Date.now().toString().slice(-10)}`,
+            notes: { kind: 'water_order' }
+        });
+
+        const quantityText = normalized.map((i) => `${i.size_ml}ml x ${i.qty}`).join(', ');
+        const notes = JSON.stringify({
+            cart_items: normalized,
+            total_amount: total,
+            razorpay_order_id: order.id
+        });
+
+        const { data: waterOrder, error } = await supabaseAdmin
+            .from('water_orders')
+            .insert([{
+                customer_name: customer_info.name,
+                phone: customer_info.phone,
+                email: customer_info.email || null,
+                quantity_text: quantityText,
+                full_address: customer_info.address || '',
+                design_url: design_url || null,
+                status: 'new',
+                payment_status: 'pending',
+                razorpay_order_id: order.id,
+                notes
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Water order insert failed:', error);
+            return res.status(500).json({ message: 'Failed to create water order row' });
+        }
+
+        res.status(200).json({
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            key_id: process.env.RAZORPAY_KEY_ID,
+            water_order_id: waterOrder.id,
+            prefill: {
+                name: customer_info.name,
+                email: customer_info.email || '',
+                contact: customer_info.phone
+            }
+        });
+    } catch (err) {
+        console.error('Create water order API Error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 app.post('/api/create-razorpay-order', async (req, res) => {
     try {
         const { event_id, influencer_code, customer_info } = req.body;
@@ -798,6 +1008,14 @@ app.post('/api/razorpay-webhook', async (req, res) => {
 
         if (error) console.error('Update Error:', error);
         else console.log('Booking marked as PAID:', order_id);
+
+        const { error: waterError } = await supabaseAdmin
+            .from('water_orders')
+            .update({ payment_status: 'paid' })
+            .eq('razorpay_order_id', order_id);
+
+        if (waterError) console.error('Water order update error:', waterError);
+        else console.log('Water order marked as PAID:', order_id);
     }
 
     res.json({ status: 'ok' });

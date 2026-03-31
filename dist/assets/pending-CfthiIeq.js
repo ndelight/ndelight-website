@@ -1,0 +1,1 @@
+import{s as t}from"./supabase-DgD8GzGi.js";/* empty css              */document.getElementById("logoutInit").addEventListener("click",async()=>{await t.auth.signOut(),window.location.href="/login.html"});

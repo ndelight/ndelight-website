@@ -67,8 +67,8 @@
     <div class="success-container">
         <div class="success-card">
             <div class="success-icon">✓</div>
-            <h1>Payment Successful!</h1>
-            <p>Your booking has been confirmed. We have sent the ticket details to your email.</p>
+            <h1 id="success-title">Payment Successful!</h1>
+            <p id="success-message">Your booking has been confirmed. We have sent the ticket details to your email.</p>
 
             <div id="payment-info" style="display:none;">
                 <small>Payment Reference:</small><br>
@@ -80,15 +80,24 @@
     </div>
 
     <script>
-        // Extract params from Razorpay redirect
+        // Extract params from redirect / confirmation
         const urlParams = new URLSearchParams(window.location.search);
         const paymentId = urlParams.get('razorpay_payment_id');
+        const waterOrderId = urlParams.get('water_order_id');
 
         if (paymentId) {
             document.getElementById('payment-info').style.display = 'block';
             document.getElementById('ref-id').textContent = paymentId;
 
             // Optional: Clear cart logic if any
+        }
+
+        if (waterOrderId) {
+            document.getElementById('success-title').textContent = 'Request Received!';
+            document.getElementById('success-message').textContent =
+                'Your water order request has been submitted. Our team will contact you shortly to confirm details and share payment options.';
+            // Keep payment reference hidden for water requests
+            document.getElementById('payment-info').style.display = 'none';
         }
     </script>
 </body>
