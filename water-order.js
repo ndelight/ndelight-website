@@ -14,6 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     const cart = {};
 
+    // Payment method UI: change CTA text without changing behavior.
+    const paymentRadios = form.querySelectorAll('input[name="water-payment-method"]');
+    if (paymentRadios && paymentRadios.length) {
+        const syncButtonText = () => {
+            const selected =
+                form.querySelector('input[name="water-payment-method"]:checked')?.value || 'razorpay';
+            submitBtn.textContent = selected === 'cash' ? 'Place Order' : 'Proceed to Payment';
+        };
+        paymentRadios.forEach((r) => r.addEventListener('change', syncButtonText));
+        syncButtonText();
+    }
+
     async function fetchWithFallback(urls, options = {}) {
         let lastResponse = null;
         for (const url of urls) {
@@ -177,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const phone = document.getElementById('water-phone').value.trim();
         const email = document.getElementById('water-email').value.trim();
         const address = document.getElementById('water-address').value.trim();
+        const paymentMethod =
+            form.querySelector('input[name="water-payment-method"]:checked')?.value || 'razorpay';
 
         const cartItems = Object.values(cart);
         if (cartItems.length === 0) {
@@ -191,7 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         submitBtn.disabled = true;
         const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Creating payment order...';
+        submitBtn.textContent =
+            paymentMethod === 'cash' ? 'Placing order...' : 'Creating payment order...';
 
         try {
             const response = await fetchWithFallback(
@@ -203,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         customer_info: { name, phone, email: email || null, address },
                         items: cartItems.map((i) => ({ size_ml: i.sizeMl, qty: i.qty })),
                         design_url: null,
+                        payment_method: paymentMethod,
                     }),
                 }
             );
@@ -214,6 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(parsed.message || raw || 'Unable to create payment order');
             }
             const orderData = parsed;
+
+            // Cash payment: backend will only create the DB row (no Razorpay checkout).
+            if (paymentMethod === 'cash') {
+                window.location.href = `/success.html?water_order_id=${orderData.water_order_id || ''}`;
+                return;
+            }
 
             const rzp = new Razorpay({
                 key: orderData.key_id,

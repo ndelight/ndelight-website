@@ -23,10 +23,13 @@ CREATE TABLE IF NOT EXISTS water_orders (
 ALTER TABLE water_orders ENABLE ROW LEVEL SECURITY;
 
 -- Allow anyone (anon or authenticated) to place an order
-CREATE POLICY "Anyone can insert water orders"
+CREATE POLICY "Anyone can insert water orders (pending only)"
 ON water_orders FOR INSERT
 TO anon, authenticated
-WITH CHECK (true);
+WITH CHECK (
+    payment_status = 'pending'
+    AND razorpay_order_id IS NULL
+);
 
 -- Allow admins to view and manage all water orders
 CREATE POLICY "Admins can manage water orders"

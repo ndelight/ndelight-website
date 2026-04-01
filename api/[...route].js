@@ -70,10 +70,11 @@ async function handleGetWaterProducts(req, res) {
 async function handleCreateWaterOrder(req, res) {
     if (req.method !== 'POST') return json(res, 405, { message: 'Method Not Allowed' });
 
-    const { customer_info, items, design_url } = await readJson(req);
+    const { customer_info, items, design_url, payment_method } = await readJson(req);
     if (!customer_info || !Array.isArray(items) || items.length === 0) {
         return json(res, 400, { message: 'Missing required fields' });
     }
+    const paymentMethod = payment_method === 'cash' ? 'cash' : 'razorpay';
 
     const { data: products, error: productError } = await supabaseAdmin
         .from('water_products')
@@ -98,22 +99,25 @@ async function handleCreateWaterOrder(req, res) {
     }
     if (total <= 0 || normalized.length === 0) return json(res, 400, { message: 'Invalid cart items' });
 
-    const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-    const order = await razorpay.orders.create({
-        amount: Math.round(total * 100),
-        currency: 'INR',
-        receipt: `wtr_${Date.now().toString().slice(-10)}`,
-        notes: { kind: 'water_order' },
-    });
+    let order = null;
+    if (paymentMethod === 'razorpay') {
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+        order = await razorpay.orders.create({
+            amount: Math.round(total * 100),
+            currency: 'INR',
+            receipt: `wtr_${Date.now().toString().slice(-10)}`,
+            notes: { kind: 'water_order' },
+        });
+    }
 
     const quantityText = normalized.map((i) => `${i.size_ml}ml x ${i.qty}`).join(', ');
     const notes = JSON.stringify({
         cart_items: normalized,
         total_amount: total,
-        razorpay_order_id: order.id,
+        razorpay_order_id: order ? order.id : null,
     });
 
     const { data: waterOrder, error } = await supabaseAdmin
@@ -128,7 +132,7 @@ async function handleCreateWaterOrder(req, res) {
                 design_url: design_url || null,
                 status: 'new',
                 payment_status: 'pending',
-                razorpay_order_id: order.id,
+                razorpay_order_id: order ? order.id : null,
                 notes,
             },
         ])
@@ -136,6 +140,13 @@ async function handleCreateWaterOrder(req, res) {
         .single();
 
     if (error) return json(res, 500, { message: 'Failed to create water order row' });
+
+    if (paymentMethod === 'cash') {
+        return json(res, 200, {
+            water_order_id: waterOrder.id,
+            payment_method: 'cash',
+        });
+    }
 
     return json(res, 200, {
         order_id: order.id,

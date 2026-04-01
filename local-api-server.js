@@ -689,10 +689,11 @@ app.get('/api/water/get-products', async (req, res) => {
 
 app.post('/api/create-water-razorpay-order', async (req, res) => {
     try {
-        const { customer_info, items, design_url } = req.body;
+        const { customer_info, items, design_url, payment_method } = req.body;
         if (!customer_info || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
+        const paymentMethod = payment_method === 'cash' ? 'cash' : 'razorpay';
 
         const { data: products, error: productError } = await supabaseAdmin
             .from('water_products')
@@ -723,18 +724,21 @@ app.post('/api/create-water-razorpay-order', async (req, res) => {
             return res.status(400).json({ message: 'Invalid cart items' });
         }
 
-        const order = await razorpay.orders.create({
-            amount: Math.round(total * 100),
-            currency: 'INR',
-            receipt: `wtr_${Date.now().toString().slice(-10)}`,
-            notes: { kind: 'water_order' }
-        });
+        let order = null;
+        if (paymentMethod === 'razorpay') {
+            order = await razorpay.orders.create({
+                amount: Math.round(total * 100),
+                currency: 'INR',
+                receipt: `wtr_${Date.now().toString().slice(-10)}`,
+                notes: { kind: 'water_order' },
+            });
+        }
 
         const quantityText = normalized.map((i) => `${i.size_ml}ml x ${i.qty}`).join(', ');
         const notes = JSON.stringify({
             cart_items: normalized,
             total_amount: total,
-            razorpay_order_id: order.id
+            razorpay_order_id: order ? order.id : null,
         });
 
         const { data: waterOrder, error } = await supabaseAdmin
@@ -748,7 +752,7 @@ app.post('/api/create-water-razorpay-order', async (req, res) => {
                 design_url: design_url || null,
                 status: 'new',
                 payment_status: 'pending',
-                razorpay_order_id: order.id,
+                razorpay_order_id: order ? order.id : null,
                 notes
             }])
             .select()
@@ -759,7 +763,14 @@ app.post('/api/create-water-razorpay-order', async (req, res) => {
             return res.status(500).json({ message: 'Failed to create water order row' });
         }
 
-        res.status(200).json({
+        if (paymentMethod === 'cash') {
+            return res.status(200).json({
+                water_order_id: waterOrder.id,
+                payment_method: 'cash',
+            });
+        }
+
+        return res.status(200).json({
             order_id: order.id,
             amount: order.amount,
             currency: order.currency,
@@ -768,8 +779,8 @@ app.post('/api/create-water-razorpay-order', async (req, res) => {
             prefill: {
                 name: customer_info.name,
                 email: customer_info.email || '',
-                contact: customer_info.phone
-            }
+                contact: customer_info.phone,
+            },
         });
     } catch (err) {
         console.error('Create water order API Error:', err);
@@ -779,10 +790,11 @@ app.post('/api/create-water-razorpay-order', async (req, res) => {
 
 app.post('/api/water/create-order', async (req, res) => {
     try {
-        const { customer_info, items, design_url } = req.body;
+        const { customer_info, items, design_url, payment_method } = req.body;
         if (!customer_info || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
+        const paymentMethod = payment_method === 'cash' ? 'cash' : 'razorpay';
 
         const { data: products, error: productError } = await supabaseAdmin
             .from('water_products')
@@ -813,18 +825,21 @@ app.post('/api/water/create-order', async (req, res) => {
             return res.status(400).json({ message: 'Invalid cart items' });
         }
 
-        const order = await razorpay.orders.create({
-            amount: Math.round(total * 100),
-            currency: 'INR',
-            receipt: `wtr_${Date.now().toString().slice(-10)}`,
-            notes: { kind: 'water_order' }
-        });
+        let order = null;
+        if (paymentMethod === 'razorpay') {
+            order = await razorpay.orders.create({
+                amount: Math.round(total * 100),
+                currency: 'INR',
+                receipt: `wtr_${Date.now().toString().slice(-10)}`,
+                notes: { kind: 'water_order' },
+            });
+        }
 
         const quantityText = normalized.map((i) => `${i.size_ml}ml x ${i.qty}`).join(', ');
         const notes = JSON.stringify({
             cart_items: normalized,
             total_amount: total,
-            razorpay_order_id: order.id
+            razorpay_order_id: order ? order.id : null,
         });
 
         const { data: waterOrder, error } = await supabaseAdmin
@@ -838,7 +853,7 @@ app.post('/api/water/create-order', async (req, res) => {
                 design_url: design_url || null,
                 status: 'new',
                 payment_status: 'pending',
-                razorpay_order_id: order.id,
+                razorpay_order_id: order ? order.id : null,
                 notes
             }])
             .select()
@@ -849,7 +864,14 @@ app.post('/api/water/create-order', async (req, res) => {
             return res.status(500).json({ message: 'Failed to create water order row' });
         }
 
-        res.status(200).json({
+        if (paymentMethod === 'cash') {
+            return res.status(200).json({
+                water_order_id: waterOrder.id,
+                payment_method: 'cash',
+            });
+        }
+
+        return res.status(200).json({
             order_id: order.id,
             amount: order.amount,
             currency: order.currency,
@@ -858,8 +880,8 @@ app.post('/api/water/create-order', async (req, res) => {
             prefill: {
                 name: customer_info.name,
                 email: customer_info.email || '',
-                contact: customer_info.phone
-            }
+                contact: customer_info.phone,
+            },
         });
     } catch (err) {
         console.error('Create water order API Error:', err);

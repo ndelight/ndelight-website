@@ -43,6 +43,8 @@
         .checkout label { font-size: .78rem; color: #cbd5e1; display: block; margin-bottom: .2rem; }
         .checkout input, .checkout textarea { width: 100%; padding: .55rem; border: 1px solid rgba(148, 163, 184, 0.6); border-radius: 8px; font-size: .84rem; background: #0b1020; color: #f8fafc; }
         .pay-btn { width: 100%; background: linear-gradient(135deg,#0284c7,#1d4ed8); color: #fff; border: none; border-radius: 9px; padding: .7rem; cursor: pointer; font-weight: 700; margin-top: .6rem; }
+        .payment-method { display: flex; gap: .9rem; flex-wrap: wrap; align-items: center; }
+        .payment-method label { display: inline-flex; gap: .45rem; align-items: center; color: #cbd5e1; font-size: .78rem; }
         @media (max-width: 980px){ .shop-wrap{ grid-template-columns: 1fr; } .side{ position: static; } }
     </style>
 </head>
@@ -89,6 +91,13 @@
                 <div class="form-group"><label for="water-phone">Phone</label><input id="water-phone" required placeholder="+91..."></div>
                 <div class="form-group"><label for="water-email">Email (optional)</label><input id="water-email" type="email" placeholder="name@email.com"></div>
                 <div class="form-group"><label for="water-address">Address</label><textarea id="water-address" rows="2" required></textarea></div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div class="payment-method">
+                        <label><input type="radio" name="water-payment-method" value="razorpay" checked> Online (Razorpay)</label>
+                        <label><input type="radio" name="water-payment-method" value="cash"> Cash</label>
+                    </div>
+                </div>
                 <button type="submit" id="checkout-btn" class="pay-btn">Proceed to Payment</button>
             </form>
         </aside>
