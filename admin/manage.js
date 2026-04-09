@@ -550,6 +550,12 @@ async function loadWater(container) {
         .select('id, size_ml, title, unit_price, image_url, display_order, is_active')
         .order('display_order', { ascending: true })
 
+    // 4. Water Samples (Carousel)
+    const { data: samples, error: samplesError } = await supabase
+        .from('water_samples')
+        .select('*')
+        .order('display_order', { ascending: true })
+
     let html = '<h3>Water Orders</h3>'
 
     if (ordersError) {
@@ -573,6 +579,32 @@ async function loadWater(container) {
         html += '</tbody></table>'
     } else {
         html += '<p>No water orders yet.</p>'
+    }
+
+    html += '<h3 style="margin-top:2.5rem;">Manage Samples/Design (Carousel)</h3>'
+
+    if (samplesError) {
+        html += `<p style="color:red">Error loading samples: ${samplesError.message}</p>`
+    } else {
+        html += '<button class="btn-action" style="margin-bottom:1rem;" onclick="window.openWaterSampleModal(null)">+ Add Sample</button>'
+
+        if (samples && samples.length > 0) {
+            html += '<table><thead><tr><th>Order</th><th>Preview</th><th>Active</th><th>Actions</th></tr></thead><tbody>'
+            samples.forEach(sample => {
+                html += `<tr>
+                    <td>${sample.display_order}</td>
+                    <td><a href="${sample.image_url}" target="_blank" style="color:#ffd700; font-size:0.8rem;">View Image</a></td>
+                    <td>${sample.is_active ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button class="btn-action" style="font-size:0.7rem; margin-right:5px;" onclick="window.openWaterSampleModal('${sample.id}')">Edit</button>
+                        <button class="btn-delete" style="font-size:0.7rem;" onclick="window.deleteWaterSample('${sample.id}')">Delete</button>
+                    </td>
+                </tr>`
+            })
+            html += '</tbody></table>'
+        } else {
+            html += '<p>No samples configured yet. The carousel will use default images.</p>'
+        }
     }
 
     html += '<h3 style="margin-top:2.5rem;">Water Page Cards</h3>'
@@ -992,6 +1024,135 @@ window.saveWaterProduct = async () => {
 window.deleteWaterProduct = async (id) => {
     if (!confirm('Delete this water product?')) return
     const { error } = await supabase.from('water_products').delete().eq('id', id)
+    if (error) {
+        alert('Delete failed: ' + error.message)
+    } else {
+        await loadWater(document.getElementById('dynamicContent'))
+    }
+}
+
+// Water Samples Modal helpers (Carousel)
+window.openWaterSampleModal = async (id) => {
+    const modal = document.getElementById('waterSampleModal')
+    const err = document.getElementById('waterSampleError')
+    const imageFileInput = document.getElementById('waterSampleImageFile')
+    const imageInfo = document.getElementById('waterSampleImageInfo')
+    err.style.display = 'none'
+    err.textContent = ''
+    imageFileInput.value = ''
+
+    if (id) {
+        const { data, error } = await supabase
+            .from('water_samples')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error || !data) {
+            alert('Unable to load sample.')
+            return
+        }
+
+        document.getElementById('waterSampleId').value = data.id
+        document.getElementById('waterSampleImageUrl').value = data.image_url || ''
+        document.getElementById('waterSampleOrder').value = data.display_order || 1
+        document.getElementById('waterSampleActive').checked = !!data.is_active
+        imageInfo.innerHTML = data.image_url
+            ? `Current: <a href="${data.image_url}" target="_blank" style="color:#ffd700">View Image</a> (Upload new to replace)`
+            : 'No image currently set.'
+
+        document.getElementById('waterSampleTitle').textContent = 'Edit Sample'
+    } else {
+        document.getElementById('waterSampleId').value = ''
+        document.getElementById('waterSampleImageUrl').value = ''
+        document.getElementById('waterSampleOrder').value = 1
+        document.getElementById('waterSampleActive').checked = true
+        imageInfo.textContent = ''
+        document.getElementById('waterSampleTitle').textContent = 'Add Sample'
+    }
+
+    modal.classList.add('active')
+}
+
+window.closeWaterSampleModal = () => {
+    document.getElementById('waterSampleModal').classList.remove('active')
+}
+
+window.saveWaterSample = async () => {
+    const id = document.getElementById('waterSampleId').value
+    const err = document.getElementById('waterSampleError')
+    const imageFileInput = document.getElementById('waterSampleImageFile')
+    const imageInfo = document.getElementById('waterSampleImageInfo')
+
+    let finalImageUrl = document.getElementById('waterSampleImageUrl').value || null
+
+    if (imageFileInput.files.length > 0) {
+        const file = imageFileInput.files[0]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `samples/${fileName}`
+
+        imageInfo.textContent = 'Uploading image...'
+
+        const { error: uploadError } = await supabase.storage
+            .from('water-designs')
+            .upload(filePath, file)
+
+        if (uploadError) {
+            err.textContent = 'Image upload failed: ' + uploadError.message
+            err.style.display = 'block'
+            imageInfo.textContent = 'Upload failed.'
+            return
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('water-designs')
+            .getPublicUrl(filePath)
+
+        finalImageUrl = publicUrl
+        document.getElementById('waterSampleImageUrl').value = finalImageUrl
+        imageInfo.innerHTML = `Uploaded: <a href="${finalImageUrl}" target="_blank" style="color:#ffd700">View Image</a>`
+    }
+
+    if (!finalImageUrl) {
+        err.textContent = 'Image is required. Please upload or provide an image URL.'
+        err.style.display = 'block'
+        return
+    }
+
+    const payload = {
+        image_url: finalImageUrl,
+        display_order: parseInt(document.getElementById('waterSampleOrder').value || '1', 10),
+        is_active: document.getElementById('waterSampleActive').checked
+    }
+
+    let dbError
+    if (id) {
+        const { error } = await supabase
+            .from('water_samples')
+            .update(payload)
+            .eq('id', id)
+        dbError = error
+    } else {
+        const { error } = await supabase
+            .from('water_samples')
+            .insert([payload])
+        dbError = error
+    }
+
+    if (dbError) {
+        err.textContent = 'Save failed: ' + dbError.message
+        err.style.display = 'block'
+        return
+    }
+
+    window.closeWaterSampleModal()
+    await loadWater(document.getElementById('dynamicContent'))
+}
+
+window.deleteWaterSample = async (id) => {
+    if (!confirm('Delete this sample?')) return
+    const { error } = await supabase.from('water_samples').delete().eq('id', id)
     if (error) {
         alert('Delete failed: ' + error.message)
     } else {

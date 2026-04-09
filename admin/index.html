@@ -343,6 +343,39 @@
         </div>
     </div>
 
+    <!-- Water Samples Modal (Carousel) -->
+    <div id="waterSampleModal" class="modal">
+        <div class="modal-content">
+            <h3 id="waterSampleTitle">Water Sample</h3>
+            <div id="waterSampleError" style="color: #ff6b6b; margin-bottom:1rem; display:none;"></div>
+
+            <input type="hidden" id="waterSampleId">
+
+            <div class="form-group">
+                <label>Image URL</label>
+                <input type="text" id="waterSampleImageUrl" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Upload Sample Image (Choose/Upload)</label>
+                <input type="file" id="waterSampleImageFile" accept="image/*" style="padding: 5px;">
+                <p id="waterSampleImageInfo" style="color: #bbb; font-size: 0.8rem; margin-top: 5px;">Images of any size will fit without cropping</p>
+            </div>
+            <div class="form-group">
+                <label>Display Order</label>
+                <input type="number" id="waterSampleOrder" placeholder="1, 2, 3..." min="1">
+            </div>
+            <div class="form-group">
+                <label>Active?</label>
+                <input type="checkbox" id="waterSampleActive" checked>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-logout" onclick="window.closeWaterSampleModal()">Cancel</button>
+                <button class="btn-action" onclick="window.saveWaterSample()">Save Sample</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Water Products Modal -->
     <div id="waterProductModal" class="modal">
         <div class="modal-content">

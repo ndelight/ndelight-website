@@ -90,72 +90,172 @@
             isolation: isolate;
         }
 
-        .water-bottle-card {
-            position: relative;
-            border-radius: 24px;
-            padding: 1.75rem;
-            background: radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.45), transparent 55%),
-                radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.35), transparent 60%),
-                rgba(15, 23, 42, 0.92);
-            border: 1px solid rgba(148, 163, 184, 0.45);
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
-            overflow: hidden;
-        }
-
-        .water-bottle-image {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-        }
-
-        .water-bottle-image img {
-            max-width: 260px;
-            max-height: 360px;
+        .carousel-card {
             width: 100%;
+            max-width: 520px;
+            margin-inline: auto;
+            position: relative;
+            border-radius: 28px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #0f2a44, #0b1c2e);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+            padding: 18px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .carousel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.48);
+        }
+
+        .carousel-viewport {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            border-radius: 18px;
+            background: transparent;
+            z-index: 1;
+        }
+
+        .carousel-item {
+            width: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            animation: carouselFadeIn 0.45s ease;
+        }
+
+        .carousel-item.active {
+            display: flex;
+        }
+
+        @keyframes carouselFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .carousel-image {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 70vh;
             object-fit: contain;
-            filter: drop-shadow(0 30px 45px rgba(15, 23, 42, 0.9));
+            object-position: center;
+            display: block;
+            border-radius: 18px;
+            box-shadow: none;
         }
 
-        .water-badge {
+        .carousel-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            color: #8ea9c9;
+            text-align: center;
+            background: linear-gradient(180deg, rgba(10, 18, 34, 0.6), rgba(8, 12, 22, 0.85));
+            border: 1px dashed rgba(148, 163, 184, 0.22);
+            border-radius: 18px;
+            min-height: 320px;
+        }
+
+        .carousel-placeholder svg {
+            opacity: 0.65;
+        }
+
+        .carousel-arrow {
             position: absolute;
-            inset-inline-end: 1.3rem;
-            inset-block-start: 1.4rem;
-            padding: 0.55rem 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(96, 165, 250, 0.7);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            color: #bfdbfe;
-            z-index: 4;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            z-index: 3;
+            color: #eff6ff;
         }
 
-        .water-orbit {
-            position: absolute;
-            inset-inline-start: -40%;
-            inset-block-start: -10%;
-            width: 260%;
-            height: 260%;
-            border-radius: 999px;
-            border: 1px dashed rgba(148, 163, 184, 0.25);
-            opacity: 0.6;
+        .carousel-arrow:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateY(-50%) scale(1.05);
         }
 
-        .water-specs {
+        .carousel-arrow.left {
+            left: 12px;
+        }
+
+        .carousel-arrow.right {
+            right: 12px;
+        }
+
+        .carousel-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .carousel-indicators .dot {
+            height: 6px;
+            width: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .carousel-indicators .dot.active {
+            width: 22px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+        }
+
+        .carousel-indicators .dot:hover {
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .carousel-meta {
             display: flex;
             justify-content: space-between;
             gap: 1rem;
-            margin-top: 1.25rem;
-            font-size: 0.8rem;
-            color: #cbd5f5;
+            margin-top: 1rem;
+            color: #cbd5e1;
+            font-size: 0.82rem;
         }
 
-        .water-specs strong {
+        .carousel-meta strong {
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.86rem;
+            color: #f8fafc;
             margin-bottom: 0.2rem;
-            color: #e5e7eb;
+        }
+
+        .carousel-meta > div {
+            flex: 1;
         }
 
         .water-section {
@@ -330,6 +430,43 @@
             margin-top: 2rem;
         }
 
+        /* Carousel Styles */
+        @media (max-width: 768px) {
+            .carousel-card {
+                max-width: 100%;
+                padding: 14px;
+            }
+
+            .carousel-arrow {
+                width: 36px;
+                height: 36px;
+            }
+
+            .carousel-meta {
+                font-size: 0.78rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .carousel-arrow {
+                width: 32px;
+                height: 32px;
+            }
+
+            .carousel-viewport {
+                min-height: 220px;
+            }
+
+            .carousel-image {
+                max-height: 56vh;
+            }
+
+            .carousel-meta {
+                gap: 0.75rem;
+                flex-direction: column;
+            }
+        }
+
         @media (max-width: 960px) {
             .water-hero {
                 grid-template-columns: minmax(0, 1fr);
@@ -415,22 +552,40 @@
                 </div>
 
                 <div class="water-hero-visual fade-in-up">
-                    <div class="water-bottle-card">
-                        <div class="water-orbit"></div>
-                        <div class="water-badge">NDelight Water</div>
-                        <div class="water-bottle-image">
-                            <img src="https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=700&q=80"
-                                alt="Premium Branded Water Bottle">
+                    <div class="carousel-card">
+                        <button class="carousel-arrow left" id="carouselPrev" aria-label="Previous slide">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+
+                        <div class="carousel-viewport" id="waterSamplesCarousel" aria-label="Water bottle samples carousel">
+                            <div class="carousel-item">
+                                <div class="carousel-placeholder">
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                                        <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+                                        <path d="M7 15l3-3 2 2 3-4 2 2"></path>
+                                    </svg>
+                                    <span>Preview coming soon</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="water-specs">
-                            <div>
-                                <strong>Formats</strong>
-                                250ml • 500ml • 1L
-                            </div>
-                            <div>
-                                <strong>Use-cases</strong>
-                                College fests, launches, weddings, summits
-                            </div>
+
+                        <button class="carousel-arrow right" id="carouselNext" aria-label="Next slide">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="carousel-indicators" id="carouselDots"></div>
+                    <div class="carousel-meta">
+                        <div>
+                            <strong>Formats</strong>
+                            250ml • 500ml • 1L
+                        </div>
+                        <div>
+                            <strong>Use-cases</strong>
+                            College fests, launches, weddings, summits
                         </div>
                     </div>
                 </div>
