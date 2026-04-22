@@ -13,9 +13,13 @@ function json(res, status, payload) {
 
 function getPath(req) {
     try {
-        return new URL(req.url, 'http://localhost').pathname;
+        // Vercel's req.url is typically just the path
+        let path = new URL(req.url, 'http://localhost').pathname;
+        // Normalize: remove trailing slash and ensure it starts with /
+        path = path.replace(/\/+$/, '') || '/';
+        return path;
     } catch {
-        return req.url || '/';
+        return (req.url || '/').split('?')[0].replace(/\/+$/, '') || '/';
     }
 }
 
@@ -557,31 +561,38 @@ async function handleAuthVerifyOtpPreSignup(req, res) {
 export default async function handler(req, res) {
     const path = getPath(req);
 
+    const isPath = (target) => {
+        const normalizedTarget = target.replace(/\/+$/, '');
+        const withApi = normalizedTarget.startsWith('/api') ? normalizedTarget : `/api${normalizedTarget}`;
+        const withoutApi = normalizedTarget.startsWith('/api') ? normalizedTarget.slice(4) : normalizedTarget;
+        return path === withApi || path === withoutApi;
+    };
+
     // Contact
-    if (path === '/api/contact') return handleContact(req, res);
+    if (isPath('/api/contact')) return handleContact(req, res);
 
     // Water
-    if (path === '/api/get-water-products' || path === '/api/water/get-products') return handleGetWaterProducts(req, res);
-    if (path === '/api/create-water-razorpay-order' || path === '/api/water/create-order') return handleCreateWaterOrder(req, res);
+    if (isPath('/api/get-water-products') || isPath('/api/water/get-products')) return handleGetWaterProducts(req, res);
+    if (isPath('/api/create-water-razorpay-order') || isPath('/api/water/create-order')) return handleCreateWaterOrder(req, res);
 
     // Events payment
-    if (path === '/api/create-razorpay-order') return handleCreateEventOrder(req, res);
+    if (isPath('/api/create-razorpay-order')) return handleCreateEventOrder(req, res);
 
     // Emails
-    if (path === '/api/send-booking-email') return handleSendBookingEmail(req, res);
-    if (path === '/api/send-approval-email') return handleSendApprovalEmail(req, res);
+    if (isPath('/api/send-booking-email')) return handleSendBookingEmail(req, res);
+    if (isPath('/api/send-approval-email')) return handleSendApprovalEmail(req, res);
 
     // Webhook
-    if (path === '/api/razorpay-webhook') return handleRazorpayWebhook(req, res);
+    if (isPath('/api/razorpay-webhook')) return handleRazorpayWebhook(req, res);
 
     // Auth
-    if (path === '/api/auth/send-otp-pre-signup') return handleAuthSendOtpPreSignup(req, res);
-    if (path === '/api/auth/verify-otp-pre-signup') return handleAuthVerifyOtpPreSignup(req, res);
-    if (path === '/api/auth/send-otp') return handleAuthSendOtp(req, res);
-    if (path === '/api/auth/verify-otp') return handleAuthVerifyOtp(req, res);
-    if (path === '/api/auth/forgot-password') return handleAuthForgotPassword(req, res);
-    if (path === '/api/auth/reset-password') return handleAuthResetPassword(req, res);
-    if (path === '/api/auth/mark-verified') return handleAuthMarkVerified(req, res);
+    if (isPath('/api/auth/send-otp-pre-signup')) return handleAuthSendOtpPreSignup(req, res);
+    if (isPath('/api/auth/verify-otp-pre-signup')) return handleAuthVerifyOtpPreSignup(req, res);
+    if (isPath('/api/auth/send-otp')) return handleAuthSendOtp(req, res);
+    if (isPath('/api/auth/verify-otp')) return handleAuthVerifyOtp(req, res);
+    if (isPath('/api/auth/forgot-password')) return handleAuthForgotPassword(req, res);
+    if (isPath('/api/auth/reset-password')) return handleAuthResetPassword(req, res);
+    if (isPath('/api/auth/mark-verified')) return handleAuthMarkVerified(req, res);
 
     return json(res, 404, { message: 'Not Found' });
 }
